@@ -104,10 +104,15 @@ const bookingSeatJson = `COALESCE((
   WHERE selected_booking_seats.booking_id = bookings.id
 ), '[]'::json) AS seat_details`;
 
-export async function getBusRoutes(searchParams?: { from?: string | string[]; to?: string | string[]; date?: string | string[] }) {
+export async function getBusRoutes(searchParams?: { from?: string | string[]; to?: string | string[]; date?: string | string[]; time?: string | string[] }) {
   const from = normalizeSearchParam(searchParams?.from).trim().toLowerCase();
   const to = normalizeSearchParam(searchParams?.to).trim().toLowerCase();
   const date = normalizeDateValue(normalizeSearchParam(searchParams?.date).trim());
+  const time = normalizeSearchParam(searchParams?.time).trim().toLowerCase();
+  const dateClause = date ? 'AND s.travel_date = $5::date' : '';
+  const timeParameter = date ? 6 : 5;
+  const timeClause = time ? `AND LOWER(s.departure) = $${timeParameter}` : '';
+  const limitParameter = time ? timeParameter + 1 : timeParameter;
   const select = `
     SELECT s.id, s.bus_id, r.origin, r.destination, s.travel_date AS date,
       s.departure, s.arrival, s.duration, b.name AS bus_name, s.price,
@@ -119,10 +124,17 @@ export async function getBusRoutes(searchParams?: { from?: string | string[]; to
     WHERE ($1 = '' OR LOWER(r.origin) LIKE $2)
       AND ($3 = '' OR LOWER(r.destination) LIKE $4)
       AND s.status NOT IN ('cancelled', 'completed')
-      ${date ? 'AND s.travel_date = $5::date' : ''}
+      ${dateClause}
+      ${timeClause}
     ORDER BY s.travel_date ASC, s.departure ASC
-    LIMIT $${date ? 6 : 5}`;
-  const params = date ? [from, `%${from}%`, to, `%${to}%`, date, DEFAULT_SEARCH_LIMIT] : [from, `%${from}%`, to, `%${to}%`, DEFAULT_SEARCH_LIMIT];
+    LIMIT $${limitParameter}`;
+  const params = date
+    ? time
+      ? [from, `%${from}%`, to, `%${to}%`, date, time, DEFAULT_SEARCH_LIMIT]
+      : [from, `%${from}%`, to, `%${to}%`, date, DEFAULT_SEARCH_LIMIT]
+    : time
+      ? [from, `%${from}%`, to, `%${to}%`, time, DEFAULT_SEARCH_LIMIT]
+      : [from, `%${from}%`, to, `%${to}%`, DEFAULT_SEARCH_LIMIT];
   const rows = await sql.unsafe(select, params);
   return rows.map(serializeRouteRow);
 }

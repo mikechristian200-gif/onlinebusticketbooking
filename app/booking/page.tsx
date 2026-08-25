@@ -8,13 +8,15 @@ export const dynamic = 'force-dynamic';
 export default async function BookingPage({
   searchParams,
 }: {
-  searchParams: Promise<{ from?: string | string[]; to?: string | string[]; date?: string | string[] }>;
+  searchParams: Promise<{ from?: string | string[]; to?: string | string[]; date?: string | string[]; time?: string | string[] }>;
 }) {
   const resolvedSearchParams = await searchParams;
   const routes = await getBusRoutes(resolvedSearchParams);
+  const availableRoutes = await getBusRoutes({ ...resolvedSearchParams, time: undefined });
   const routeOptions = Array.from(
-    new Map(routes.map((route) => [`${route.origin}|${route.destination}`, { origin: route.origin, destination: route.destination }])).values(),
+    new Map(availableRoutes.map((route) => [`${route.origin}|${route.destination}`, { origin: route.origin, destination: route.destination }])).values(),
   );
+  const departureOptions = Array.from(new Set(availableRoutes.map((route) => route.departure))).sort();
 
   return (
     <main className="min-h-screen bg-slate-50 px-6 py-10">
@@ -26,7 +28,7 @@ export default async function BookingPage({
           </p>
         </div>
 
-        <SearchForm routeOptions={routeOptions} />
+        <SearchForm routeOptions={routeOptions} departureOptions={departureOptions} />
 
         <section className="space-y-4">
           <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
