@@ -3,15 +3,15 @@ import { sql } from '@/app/lib/db';
 export async function GET() {
   try {
     const buses = [
-      { id: 'bus-southwest', name: 'Golden Express Southwest', type: 'standard', capacity: 6, amenities: ['Wi-Fi', 'Air conditioning', 'Reclining seats'] },
-      { id: 'bus-kumba', name: 'Golden Express Kumba Line', type: 'standard', capacity: 6, amenities: ['USB charging', 'Snacks', 'Reading lights'] },
-      { id: 'bus-coastal', name: 'Golden Express Coastal', type: 'luxury', capacity: 6, amenities: ['Restroom', 'Large luggage', 'Climate control'] },
+      { id: 'bus-southwest', name: 'Golden Express Southwest', type: 'standard', capacity: 14, amenities: ['Wi-Fi', 'Air conditioning', 'Reclining seats'] },
+      { id: 'bus-kumba', name: 'Golden Express Kumba Line', type: 'standard', capacity: 14, amenities: ['USB charging', 'Snacks', 'Reading lights'] },
+      { id: 'bus-coastal', name: 'Golden Express Coastal', type: 'luxury', capacity: 14, amenities: ['Restroom', 'Large luggage', 'Climate control'] },
     ];
     for (const bus of buses) {
       await sql`
         INSERT INTO buses (id, name, type, capacity, amenities)
         VALUES (${bus.id}, ${bus.name}, ${bus.type}, ${bus.capacity}, ${sql.json(bus.amenities)})
-        ON CONFLICT (id) DO NOTHING;
+        ON CONFLICT (id) DO UPDATE SET capacity = EXCLUDED.capacity, amenities = EXCLUDED.amenities, updated_at = now();
       `;
     }
 
@@ -109,14 +109,10 @@ export async function GET() {
           price = EXCLUDED.price, amenities = EXCLUDED.amenities, updated_at = now();
       `;
 
-      const seats = [
-        { id: '1A', available: true },
-        { id: '1B', available: true },
-        { id: '2A', available: true },
-        { id: '2B', available: true },
-        { id: '3A', available: false },
-        { id: '3B', available: true },
-      ];
+      const seats = Array.from({ length: 14 }, (_, index) => ({
+        id: `${Math.floor(index / 4) + 1}${['A', 'B', 'C', 'D'][index % 4]}`,
+        available: index !== 4,
+      }));
 
       for (const seat of seats) {
         await sql`
