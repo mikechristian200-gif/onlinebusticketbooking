@@ -32,6 +32,20 @@ function buildSeats(capacity: number, price: number) {
   return seats;
 }
 
+function shiftTime(value: string, minutesToAdd: number) {
+  const match = value.match(/^(\d{1,2}):(\d{2})\s*(AM|PM)$/i);
+  if (!match) throw new Error('Departure and arrival must use the format HH:MM AM/PM.');
+  let hours = Number(match[1]) % 12;
+  const minutes = Number(match[2]);
+  if (minutes > 59) throw new Error('Time contains invalid minutes.');
+  if (match[3].toUpperCase() === 'PM') hours += 12;
+  const shifted = (hours * 60 + minutes + minutesToAdd) % (24 * 60);
+  const shiftedHours = Math.floor(shifted / 60);
+  const suffix = shiftedHours >= 12 ? 'PM' : 'AM';
+  const displayHours = shiftedHours % 12 || 12;
+  return `${String(displayHours).padStart(2, '0')}:${String(shifted % 60).padStart(2, '0')} ${suffix}`;
+}
+
 function parseRouteInput(body: any) {
   const origin = typeof body.origin === 'string' ? body.origin.trim() : '';
   const destination = typeof body.destination === 'string' ? body.destination.trim() : '';
@@ -42,6 +56,7 @@ function parseRouteInput(body: any) {
   const busId = typeof body.busId === 'string' ? body.busId.trim() : '';
   const price = Number(body.price);
   const delayMinutes = Number(body.delayMinutes ?? 0);
+  const departureCount = Number(body.departureCount ?? 1);
   const amenities = Array.isArray(body.amenities)
     ? [...new Set(body.amenities.filter((item: unknown): item is string => typeof item === 'string').map((item: string) => item.trim()).filter(Boolean))]
     : [];
@@ -53,7 +68,10 @@ function parseRouteInput(body: any) {
   }
   if (!Number.isInteger(price) || price <= 0) throw new Error('Price must be a positive whole number.');
   if (!Number.isInteger(delayMinutes) || delayMinutes < 0) throw new Error('Delay must be zero or a positive whole number of minutes.');
-  return { origin, destination, date, departure, arrival, duration, busId, price, amenities, status, driverId, delayMinutes };
+  if (!Number.isInteger(departureCount) || departureCount < 1 || departureCount > 24) {
+    throw new Error('Departure count must be between 1 and 24.');
+  }
+  return { origin, destination, date, departure, arrival, duration, busId, price, amenities, status, driverId, delayMinutes, departureCount };
 }
 
 async function validateDriver(driverId: string | null) {
@@ -100,26 +118,29 @@ export async function POST(req: Request) {
     await validateDriver(input.driverId);
     const bus = await getBus(input.busId);
     const amenities = input.amenities.length > 0 ? input.amenities : (bus.amenities ?? []);
-    const scheduleId = `route-${randomUUID().slice(0, 8)}`;
-    const seats = buildSeats(Number(bus.capacity), input.price);
+    const routeId = `route-${randomUUID().slice(0, 8)}`;
 
     await sql.begin(async (tx) => {
       await tx`
         INSERT INTO routes (id, origin, destination)
-        VALUES (${scheduleId}, ${input.origin}, ${input.destination});
+        VALUES (${routeId}, ${input.origin}, ${input.destination});
       `;
-      await tx`
-        INSERT INTO schedules (id, route_id, bus_id, travel_date, departure, arrival, duration, price, amenities, status, driver_id, delay_minutes)
-        VALUES (${scheduleId}, ${scheduleId}, ${input.busId}, ${input.date}, ${input.departure}, ${input.arrival}, ${input.duration}, ${input.price}, ${tx.json(amenities)}, ${input.status}, ${input.driverId}, ${input.delayMinutes});
-      `;
-      for (const seat of seats) {
+      for (let departureIndex = 0; departureIndex < input.departureCount; departureIndex += 1) {
+        const scheduleId = `${routeId}-${departureIndex + 1}`;
+        const offset = departureIndex * 90;
         await tx`
-          INSERT INTO seats (id, schedule_id, label, type, available, price)
-          VALUES (${seat.id}, ${scheduleId}, ${seat.label}, ${seat.type}, true, ${seat.price});
+          INSERT INTO schedules (id, route_id, bus_id, travel_date, departure, arrival, duration, price, amenities, status, driver_id, delay_minutes)
+          VALUES (${scheduleId}, ${routeId}, ${input.busId}, ${input.date}, ${shiftTime(input.departure, offset)}, ${shiftTime(input.arrival, offset)}, ${input.duration}, ${input.price}, ${tx.json(amenities)}, ${input.status}, ${input.driverId}, ${input.delayMinutes});
         `;
+        for (const seat of buildSeats(Number(bus.capacity), input.price)) {
+          await tx`
+            INSERT INTO seats (id, schedule_id, label, type, available, price)
+            VALUES (${seat.id}, ${scheduleId}, ${seat.label}, ${seat.type}, true, ${seat.price});
+          `;
+        }
       }
     });
-    return Response.json({ id: scheduleId }, { status: 201 });
+    return Response.json({ id: routeId, departureCount: input.departureCount }, { status: 201 });
   } catch (error) {
     return jsonError(error instanceof Error ? error.message : 'Failed to create schedule', 500);
   }

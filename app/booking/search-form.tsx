@@ -4,9 +4,9 @@ import { FormEvent, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Button } from '@/app/ui/button';
 
-export default function SearchForm() {
-  const [origin, setOrigin] = useState('Limbe');
-  const [destination, setDestination] = useState('Buea');
+export default function SearchForm({ routeOptions }: { routeOptions: { origin: string; destination: string }[] }) {
+  const [origin, setOrigin] = useState(routeOptions[0]?.origin ?? '');
+  const [destination, setDestination] = useState(routeOptions[0]?.destination ?? '');
   const [date, setDate] = useState(() => new Date().toISOString().slice(0, 10));
   const router = useRouter();
 
@@ -26,19 +26,25 @@ export default function SearchForm() {
       <div className="grid gap-4 md:grid-cols-3">
         <label className="space-y-2 text-sm text-slate-700">
           <span>Origin</span>
-          <input
+          <select
             className="block w-full rounded-lg border border-slate-200 bg-slate-50 px-4 py-3 text-sm outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-200"
             value={origin}
             onChange={(event) => setOrigin(event.target.value)}
-          />
+          >
+            <option value="">Any departure location</option>
+            {Array.from(new Set(routeOptions.map((route) => route.origin))).map((location) => <option key={location} value={location}>{location}</option>)}
+          </select>
         </label>
         <label className="space-y-2 text-sm text-slate-700">
           <span>Destination</span>
-          <input
+          <select
             className="block w-full rounded-lg border border-slate-200 bg-slate-50 px-4 py-3 text-sm outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-200"
             value={destination}
             onChange={(event) => setDestination(event.target.value)}
-          />
+          >
+            <option value="">Any arrival location</option>
+            {Array.from(new Set(routeOptions.map((route) => route.destination))).map((location) => <option key={location} value={location}>{location}</option>)}
+          </select>
         </label>
         <label className="space-y-2 text-sm text-slate-700">
           <span>Travel date</span>

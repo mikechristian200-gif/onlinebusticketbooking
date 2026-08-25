@@ -12,6 +12,9 @@ export default async function BookingPage({
 }) {
   const resolvedSearchParams = await searchParams;
   const routes = await getBusRoutes(resolvedSearchParams);
+  const routeOptions = Array.from(
+    new Map(routes.map((route) => [`${route.origin}|${route.destination}`, { origin: route.origin, destination: route.destination }])).values(),
+  );
 
   return (
     <main className="min-h-screen bg-slate-50 px-6 py-10">
@@ -23,7 +26,7 @@ export default async function BookingPage({
           </p>
         </div>
 
-        <SearchForm />
+        <SearchForm routeOptions={routeOptions} />
 
         <section className="space-y-4">
           <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">

@@ -17,6 +17,7 @@ export type RouteFormInput = {
   status: RouteStatus;
   driverId: string;
   delayMinutes: number;
+  departureCount: number;
 };
 
 type Driver = { id: string; name: string; email: string };
@@ -48,6 +49,7 @@ export default function RouteForm({
     status: route?.status ?? 'scheduled',
     driverId: route?.driverId ?? '',
     delayMinutes: route?.delayMinutes ?? 0,
+    departureCount: 1,
   });
   const [amenityText, setAmenityText] = useState(form.amenities.join(', '));
   const [error, setError] = useState('');
@@ -97,7 +99,7 @@ export default function RouteForm({
           <span>Bus</span>
           <select required value={form.busId} onChange={(event) => update('busId', event.target.value)} className="block w-full rounded-lg border border-slate-200 px-3 py-2">
             <option value="">Select a bus</option>
-            {buses.map((bus) => <option key={bus.id} value={bus.id}>{bus.name} ({bus.capacity} seats)</option>)}
+            {buses.map((bus) => <option key={bus.id} value={bus.id}>{bus.name} - {form.origin || 'departure'} to {form.destination || 'arrival'} ({bus.capacity} seats)</option>)}
           </select>
         </label>
         <label className="space-y-1 text-sm text-slate-700">
@@ -118,8 +120,12 @@ export default function RouteForm({
           <span>Driver</span>
           <select value={form.driverId} onChange={(event) => update('driverId', event.target.value)} className="block w-full rounded-lg border border-slate-200 px-3 py-2">
             <option value="">Unassigned</option>
-            {drivers.map((driver) => <option key={driver.id} value={driver.id}>{driver.name}</option>)}
+            {drivers.map((driver) => <option key={driver.id} value={driver.id}>{driver.name} - {form.origin || 'departure'} to {form.destination || 'arrival'}</option>)}
           </select>
+        </label>
+        <label className="space-y-1 text-sm text-slate-700">
+          <span>Departures every 90 minutes</span>
+          <input required min="1" type="number" value={form.departureCount} onChange={(event) => update('departureCount', Number(event.target.value))} className="block w-full rounded-lg border border-slate-200 px-3 py-2" />
         </label>
         <label className="space-y-1 text-sm text-slate-700">
           <span>Delay (minutes)</span>
