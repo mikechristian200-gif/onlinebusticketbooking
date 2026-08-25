@@ -94,6 +94,7 @@ export default function RouteBookingForm({ busRoute }: { busRoute: BusRoute }) {
                 <span className="rounded-lg bg-slate-700 px-3 py-1 text-xs uppercase tracking-[0.15em]">Driver</span>
               </div>
               <div className="mt-4 grid grid-cols-3 gap-2 sm:gap-3">
+                <span className="flex min-h-20 items-center justify-center rounded-2xl border-2 border-dashed border-slate-600 text-center text-xs text-slate-400">Driver</span>
                 {frontSeats.map((seat) => {
                   const isSelected = selectedSeats.includes(seat.id);
                   return (
@@ -109,40 +110,33 @@ export default function RouteBookingForm({ busRoute }: { busRoute: BusRoute }) {
                     </button>
                   );
                 })}
-                <span className="flex min-h-20 items-center justify-center rounded-2xl border-2 border-dashed border-slate-600 text-center text-xs text-slate-400">Driver</span>
               </div>
               <p className="mt-3 text-center text-xs font-normal text-slate-300">Two passenger seats beside the driver</p>
             </div>
             <p className="mb-3 text-center text-xs font-semibold uppercase tracking-[0.15em] text-slate-500">Rear passenger rows - four seats across</p>
-            <div className="grid grid-cols-4 gap-2 sm:gap-3">
-            {rearSeats.map((seat) => {
-              const isSelected = selectedSeats.includes(seat.id);
-              return (
-                <button
-                  key={seat.id}
-                  type="button"
-                  onClick={() => handleSeatToggle(seat.id, seat.available)}
-                  aria-label={`${seat.label}, ${seat.available ? 'available' : 'sold out'}`}
-                  className={`min-h-24 rounded-2xl border-2 px-2 py-3 text-left text-sm transition sm:px-4 ${
-                    seat.available
-                      ? isSelected
-                        ? 'border-blue-600 bg-blue-600 text-white shadow-lg shadow-blue-200'
-                        : 'border-emerald-300 bg-white text-slate-700 hover:border-blue-400 hover:bg-blue-50'
-                      : 'cursor-not-allowed border-slate-300 bg-slate-200 text-slate-400'
-                  }`}
-                >
-                  <div className="flex items-center justify-between">
-                    <span className="font-semibold">{seat.label}</span>
-                    <span className={`hidden rounded-full px-2 py-0.5 text-[11px] uppercase tracking-[0.12em] sm:inline ${isSelected ? 'bg-blue-500 text-blue-50' : 'bg-slate-100 text-slate-600'}`}>
-                      {seat.type}
-                    </span>
-                  </div>
-                  <p className={`mt-3 text-xs ${isSelected ? 'text-blue-100' : 'text-slate-500'}`}>
-                    {seat.available ? (isSelected ? 'Selected' : 'Available') : 'Sold out'}
-                  </p>
-                </button>
-              );
-            })}
+            <div className="space-y-3">
+              {Array.from({ length: Math.ceil(rearSeats.length / 4) }, (_, rowIndex) => (
+                <div key={rowIndex} className="grid grid-cols-4 gap-2 sm:gap-3">
+                  {rearSeats.slice(rowIndex * 4, rowIndex * 4 + 4).map((seat) => {
+                    const isSelected = selectedSeats.includes(seat.id);
+                    return (
+                      <button
+                        key={seat.id}
+                        type="button"
+                        onClick={() => handleSeatToggle(seat.id, seat.available)}
+                        aria-label={`${seat.label}, ${seat.available ? 'available' : 'sold out'}`}
+                        className={`min-h-24 rounded-2xl border-2 px-2 py-3 text-left text-sm transition sm:px-4 ${seat.available ? isSelected ? 'border-blue-600 bg-blue-600 text-white shadow-lg shadow-blue-200' : 'border-emerald-300 bg-white text-slate-700 hover:border-blue-400 hover:bg-blue-50' : 'cursor-not-allowed border-slate-300 bg-slate-200 text-slate-400'}`}
+                      >
+                        <div className="flex items-center justify-between">
+                          <span className="font-semibold">{seat.label}</span>
+                          <span className={`hidden rounded-full px-2 py-0.5 text-[11px] uppercase tracking-[0.12em] sm:inline ${isSelected ? 'bg-blue-500 text-blue-50' : 'bg-slate-100 text-slate-600'}`}>{seat.type}</span>
+                        </div>
+                        <p className={`mt-3 text-xs ${isSelected ? 'text-blue-100' : 'text-slate-500'}`}>{seat.available ? (isSelected ? 'Selected' : 'Available') : 'Sold out'}</p>
+                      </button>
+                    );
+                  })}
+                </div>
+              ))}
             </div>
             <div className="mt-5 flex flex-wrap gap-4 text-xs text-slate-600">
               <span className="flex items-center gap-2"><span className="h-3 w-3 rounded border-2 border-emerald-300 bg-white" /> Available</span>
