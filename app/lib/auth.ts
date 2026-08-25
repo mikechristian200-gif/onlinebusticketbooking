@@ -123,6 +123,60 @@ export async function createAccount(input: { name: string; email: string; passwo
   } satisfies AppUser;
 }
 
+export async function updateStaffAccount(input: {
+  id: string;
+  name: string;
+  email: string;
+  password?: string;
+  role: UserRole;
+}) {
+  const name = input.name.trim();
+  const email = input.email.trim().toLowerCase();
+  const password = input.password?.trim() ?? '';
+
+  if (!input.id || !name || !email) {
+    throw new Error('Name and email are required.');
+  }
+  if (password && password.length < 6) {
+    throw new Error('Password must be at least 6 characters long.');
+  }
+
+  const rows = await sql`
+    UPDATE staff_users
+    SET name = ${name},
+        email = ${email},
+        role = ${input.role},
+        role_id = ${input.role},
+        password_hash = CASE WHEN ${password} = '' THEN password_hash ELSE ${hashPassword(password)} END,
+        updated_at = now()
+    WHERE id = ${input.id}
+    RETURNING id, name, email, role;
+  `;
+
+  if (!rows[0]) {
+    throw new Error('Staff account not found.');
+  }
+
+  return {
+    id: rows[0].id,
+    name: rows[0].name,
+    email: rows[0].email,
+    role: rows[0].role as UserRole,
+  } satisfies AppUser;
+}
+
+export async function deleteStaffAccount(id: string) {
+  const rows = await sql`
+    DELETE FROM staff_users
+    WHERE id = ${id}
+    RETURNING id;
+  `;
+
+  if (!rows[0]) {
+    throw new Error('Staff account not found.');
+  }
+}
+
 export async function validateCredentials(email: string, password: string): Promise<AppUser | null> {
   const normalizedEmail = email.trim().toLowerCase();
   const rows = await sql`

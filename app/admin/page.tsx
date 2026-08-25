@@ -53,6 +53,9 @@ export default async function AdminDashboardPage() {
             <a href="/admin/routes" className="rounded-2xl bg-blue-600 px-5 py-3 text-sm font-semibold text-white hover:bg-blue-500">
               Manage routes
             </a>
+            <a href="/admin/staff" className="rounded-2xl bg-blue-600 px-5 py-3 text-sm font-semibold text-white hover:bg-blue-500">
+              Manage staff
+            </a>
             <a href="/booking" className="rounded-2xl border border-slate-200 px-5 py-3 text-sm font-semibold text-slate-700 hover:bg-slate-50">
               New booking
             </a>
