@@ -1,21 +1,46 @@
-## Next.js App Router Course - Starter
+# Golden Express bus ticket booking
 
-This is the starter template for the Next.js App Router Course. It contains the starting code for the dashboard application.
+Next.js bus ticket booking application backed by PostgreSQL.
 
-For more information, see the [course curriculum](https://nextjs.org/learn) on the Next.js Website.
+## Database setup
 
-## Local database setup
+1. Create a PostgreSQL database and copy `.env.example` to `.env.local`.
+2. Set `POSTGRES_URL` and a strong `AUTH_SECRET`.
+3. Apply migrations before starting the app:
 
-To run the Golden Express booking app with PostgreSQL:
+   ```bash
+   pnpm db:migrate
+   pnpm db:check
+   ```
 
-1. Create a local database and user.
-2. Copy `.env.example` to `.env.local`.
-3. Set `POSTGRES_URL` to your database connection string, for example:
-   `postgres://username:password@localhost:5432/your_database`
-4. Start the app with `pnpm dev`.
-5. Seed the route data by visiting `http://localhost:3000/seed` in your browser.
-6. Open `http://localhost:3000/booking` to test the booking flow.
+4. Create the initial staff accounts:
 
-If the app reports `password authentication failed`, update `POSTGRES_URL` with the correct database user and password.
+   ```bash
+   pnpm db:seed:staff
+   ```
 
-Run `pnpm db:check` to create any missing booking tables or columns, then verify the configured database connection, schema, and current row counts.
+   In production, set `INITIAL_ADMIN_EMAIL`, `INITIAL_ADMIN_PASSWORD`, and optionally `INITIAL_ADMIN_NAME` first. Development defaults are available only when `NODE_ENV` is not `production`.
+
+5. Start the app with `pnpm dev`, then use `/seed` once to load sample buses and schedules if needed.
+
+The application never creates or alters tables during normal page requests. Deployments should run `pnpm db:migrate` as a release step and fail if migrations cannot be applied.
+
+## Schema
+
+The migrations create relational tables for customers, staff roles and permissions, buses, route definitions, schedules, seats, bookings, booking-seat reservations, payments, cancellations, refunds, notifications, and audit logs. Foreign keys use restrictive deletes for financial and booking history, cascading deletes only for dependent seat/notification records, and indexes cover route search, schedule availability, bookings, payments, and audit history.
+
+## Backups
+
+Create a PostgreSQL custom-format backup with:
+
+```bash
+pnpm db:backup
+```
+
+Backups are written to the local `backups/` directory, which is ignored by Git. The command requires the PostgreSQL client tools (`pg_dump`) on `PATH`. Store backups outside the application host as well and test restores regularly. A restore can be performed with PostgreSQL’s `pg_restore`, for example:
+
+```bash
+pg_restore --dbname="$POSTGRES_URL" --clean --if-exists backups/golden-express-YYYY-MM-DDTHH-MM-SS-sssZ.dump
+```
+
+Never commit `.env`, `.env.local`, passwords, or backup files.

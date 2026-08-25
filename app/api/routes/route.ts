@@ -1,6 +1,6 @@
 import { randomUUID } from 'crypto';
-import { ensureAuthTables, getCurrentUser } from '@/app/lib/auth';
-import { ensureBookingTables, sql } from '@/app/lib/db';
+import { getCurrentUser } from '@/app/lib/auth';
+import { sql } from '@/app/lib/db';
 import { RouteStatus } from '@/app/lib/definitions';
 
 const ROUTE_STATUSES: RouteStatus[] = ['scheduled', 'boarding', 'departed', 'completed', 'cancelled'];
@@ -26,8 +26,7 @@ function buildSeats(capacity: number, price: number) {
   for (let index = 0; index < capacity; index += 1) {
     const row = Math.floor(index / 4) + 1;
     const position = index % 4;
-    const suffix = ['A', 'B', 'C', 'D'][position];
-    const id = `${row}${suffix}`;
+    const id = `${row}${['A', 'B', 'C', 'D'][position]}`;
     seats.push({ id, label: id, type: types[position], price });
   }
   return seats;
@@ -52,13 +51,8 @@ function parseRouteInput(body: any) {
   if (!origin || !destination || !isValidDate(date) || !departure || !arrival || !duration || !busId) {
     throw new Error('Origin, destination, date, times, duration, and bus are required.');
   }
-  if (!Number.isInteger(price) || price <= 0) {
-    throw new Error('Price must be a positive whole number.');
-  }
-  if (!Number.isInteger(delayMinutes) || delayMinutes < 0) {
-    throw new Error('Delay must be zero or a positive whole number of minutes.');
-  }
-
+  if (!Number.isInteger(price) || price <= 0) throw new Error('Price must be a positive whole number.');
+  if (!Number.isInteger(delayMinutes) || delayMinutes < 0) throw new Error('Delay must be zero or a positive whole number of minutes.');
   return { origin, destination, date, departure, arrival, duration, busId, price, amenities, status, driverId, delayMinutes };
 }
 
@@ -77,156 +71,117 @@ async function getBus(busId: string) {
 export async function GET() {
   const denied = await requireAdmin();
   if (denied) return denied;
-
   try {
-    await ensureAuthTables();
-    await ensureBookingTables();
     const rows = await sql`
-      SELECT
-        routes.id,
-        routes.origin,
-        routes.destination,
-        routes.date,
-        routes.departure,
-        routes.arrival,
-        routes.duration,
-        routes.bus_id AS "busId",
-        routes.bus_name AS "busName",
-        routes.price,
-        routes.amenities,
-        routes.status,
-        routes.driver_id AS "driverId",
-        routes.delay_minutes AS "delayMinutes",
-        buses.capacity AS "totalSeats",
-        staff_users.name AS "driverName",
-        COUNT(seats.id)::int AS "seatCount",
-        COUNT(seats.id) FILTER (WHERE seats.available)::int AS "availableSeats"
-      FROM routes
-      LEFT JOIN buses ON buses.id = routes.bus_id
-      LEFT JOIN staff_users ON staff_users.id = routes.driver_id
-      LEFT JOIN seats ON seats.route_id = routes.id
-      GROUP BY routes.id, buses.capacity, staff_users.name
-      ORDER BY routes.date ASC, routes.departure ASC;
+      SELECT s.id, r.origin, r.destination, s.travel_date AS date, s.departure, s.arrival,
+        s.duration, s.bus_id AS "busId", buses.name AS "busName", s.price, s.amenities,
+        s.status, s.driver_id AS "driverId", s.delay_minutes AS "delayMinutes",
+        buses.capacity AS "totalSeats", staff_users.name AS "driverName",
+        COUNT(seats.id)::int AS "seatCount", COUNT(seats.id) FILTER (WHERE seats.available)::int AS "availableSeats"
+      FROM schedules s
+      JOIN routes r ON r.id = s.route_id
+      LEFT JOIN buses ON buses.id = s.bus_id
+      LEFT JOIN staff_users ON staff_users.id = s.driver_id
+      LEFT JOIN seats ON seats.schedule_id = s.id
+      GROUP BY s.id, r.id, buses.id, staff_users.name
+      ORDER BY s.travel_date ASC, s.departure ASC;
     `;
     return Response.json(rows);
   } catch (error) {
-    return jsonError(error instanceof Error ? error.message : 'Failed to load routes', 500);
+    return jsonError(error instanceof Error ? error.message : 'Failed to load schedules', 500);
   }
 }
 
 export async function POST(req: Request) {
   const denied = await requireAdmin();
   if (denied) return denied;
-
   try {
     const input = parseRouteInput(await req.json());
-    await ensureAuthTables();
-    await ensureBookingTables();
     await validateDriver(input.driverId);
     const bus = await getBus(input.busId);
     const amenities = input.amenities.length > 0 ? input.amenities : (bus.amenities ?? []);
-    const routeId = `route-${randomUUID().slice(0, 8)}`;
+    const scheduleId = `route-${randomUUID().slice(0, 8)}`;
     const seats = buildSeats(Number(bus.capacity), input.price);
 
     await sql.begin(async (tx) => {
       await tx`
-        INSERT INTO routes (
-          id, bus_id, origin, destination, date, departure, arrival, duration,
-          bus_name, price, amenities, status, driver_id, delay_minutes
-        ) VALUES (
-          ${routeId}, ${input.busId}, ${input.origin}, ${input.destination}, ${input.date},
-          ${input.departure}, ${input.arrival}, ${input.duration}, ${bus.name}, ${input.price},
-          ${tx.json(amenities)}, ${input.status}, ${input.driverId}, ${input.delayMinutes}
-        );
+        INSERT INTO routes (id, origin, destination)
+        VALUES (${scheduleId}, ${input.origin}, ${input.destination});
+      `;
+      await tx`
+        INSERT INTO schedules (id, route_id, bus_id, travel_date, departure, arrival, duration, price, amenities, status, driver_id, delay_minutes)
+        VALUES (${scheduleId}, ${scheduleId}, ${input.busId}, ${input.date}, ${input.departure}, ${input.arrival}, ${input.duration}, ${input.price}, ${tx.json(amenities)}, ${input.status}, ${input.driverId}, ${input.delayMinutes});
       `;
       for (const seat of seats) {
         await tx`
-          INSERT INTO seats (id, route_id, label, type, available, price)
-          VALUES (${seat.id}, ${routeId}, ${seat.label}, ${seat.type}, true, ${seat.price});
+          INSERT INTO seats (id, schedule_id, label, type, available, price)
+          VALUES (${seat.id}, ${scheduleId}, ${seat.label}, ${seat.type}, true, ${seat.price});
         `;
       }
     });
-
-    return Response.json({ id: routeId }, { status: 201 });
+    return Response.json({ id: scheduleId }, { status: 201 });
   } catch (error) {
-    return jsonError(error instanceof Error ? error.message : 'Failed to create route', 500);
+    return jsonError(error instanceof Error ? error.message : 'Failed to create schedule', 500);
   }
 }
 
 export async function PUT(req: Request) {
   const denied = await requireAdmin();
   if (denied) return denied;
-
   try {
     const body = await req.json();
     const id = typeof body.id === 'string' ? body.id.trim() : '';
-    if (!id) return jsonError('Route ID is required.');
-
+    if (!id) return jsonError('Schedule ID is required.');
     const input = parseRouteInput(body);
-    await ensureAuthTables();
-    await ensureBookingTables();
     await validateDriver(input.driverId);
     const bus = await getBus(input.busId);
     const amenities = input.amenities.length > 0 ? input.amenities : (bus.amenities ?? []);
 
     await sql.begin(async (tx) => {
-      const existing = await tx`SELECT bus_id, (SELECT COUNT(*) FROM bookings WHERE route_id = ${id})::int AS booking_count FROM routes WHERE id = ${id} FOR UPDATE;`;
-      if (!existing[0]) throw new Error('Route not found.');
-      const seatCount = await tx`SELECT COUNT(*)::int AS count FROM seats WHERE route_id = ${id};`;
+      const existing = await tx`SELECT (SELECT COUNT(*) FROM bookings WHERE schedule_id = ${id})::int AS booking_count FROM schedules WHERE id = ${id} FOR UPDATE;`;
+      if (!existing[0]) throw new Error('Schedule not found.');
+      const seatCount = await tx`SELECT COUNT(*)::int AS count FROM seats WHERE schedule_id = ${id};`;
       if (Number(existing[0].booking_count) > 0 && Number(seatCount[0].count) !== Number(bus.capacity)) {
-        throw new Error('Bus capacity cannot change after this route has bookings.');
+        throw new Error('Bus capacity cannot change after this schedule has bookings.');
       }
-
+      await tx`UPDATE routes SET origin = ${input.origin}, destination = ${input.destination}, updated_at = now() WHERE id = (SELECT route_id FROM schedules WHERE id = ${id});`;
       await tx`
-        UPDATE routes SET
-          bus_id = ${input.busId}, origin = ${input.origin}, destination = ${input.destination},
-          date = ${input.date}, departure = ${input.departure}, arrival = ${input.arrival},
-          duration = ${input.duration}, bus_name = ${bus.name}, price = ${input.price},
-          amenities = ${tx.json(amenities)}, status = ${input.status}, driver_id = ${input.driverId}, delay_minutes = ${input.delayMinutes},
-          updated_at = now()
+        UPDATE schedules SET bus_id = ${input.busId}, travel_date = ${input.date}, departure = ${input.departure},
+          arrival = ${input.arrival}, duration = ${input.duration}, price = ${input.price}, amenities = ${tx.json(amenities)},
+          status = ${input.status}, driver_id = ${input.driverId}, delay_minutes = ${input.delayMinutes}, updated_at = now()
         WHERE id = ${id};
       `;
-
       if (Number(existing[0].booking_count) === 0) {
-        await tx`DELETE FROM seats WHERE route_id = ${id};`;
+        await tx`DELETE FROM seats WHERE schedule_id = ${id};`;
         for (const seat of buildSeats(Number(bus.capacity), input.price)) {
-          await tx`
-            INSERT INTO seats (id, route_id, label, type, available, price)
-            VALUES (${seat.id}, ${id}, ${seat.label}, ${seat.type}, true, ${seat.price});
-          `;
+          await tx`INSERT INTO seats (id, schedule_id, label, type, available, price) VALUES (${seat.id}, ${id}, ${seat.label}, ${seat.type}, true, ${seat.price});`;
         }
       } else {
-        await tx`UPDATE seats SET price = ${input.price} WHERE route_id = ${id} AND available = true;`;
+        await tx`UPDATE seats SET price = ${input.price} WHERE schedule_id = ${id} AND available = true;`;
       }
     });
-
     return Response.json({ id });
   } catch (error) {
-    return jsonError(error instanceof Error ? error.message : 'Failed to update route', 500);
+    return jsonError(error instanceof Error ? error.message : 'Failed to update schedule', 500);
   }
 }
 
 export async function DELETE(req: Request) {
   const denied = await requireAdmin();
   if (denied) return denied;
-
   try {
     const id = new URL(req.url).searchParams.get('id')?.trim();
-    if (!id) return jsonError('Route ID is required.');
-    await ensureBookingTables();
-
+    if (!id) return jsonError('Schedule ID is required.');
     await sql.begin(async (tx) => {
-      const bookings = await tx`SELECT COUNT(*)::int AS count FROM bookings WHERE route_id = ${id};`;
-      if (Number(bookings[0]?.count ?? 0) > 0) {
-        throw new Error('Routes with bookings cannot be deleted. Cancel the route instead.');
-      }
-      await tx`DELETE FROM seats WHERE route_id = ${id};`;
-      const deleted = await tx`DELETE FROM routes WHERE id = ${id} RETURNING id;`;
-      if (!deleted[0]) throw new Error('Route not found.');
+      const bookings = await tx`SELECT COUNT(*)::int AS count FROM bookings WHERE schedule_id = ${id};`;
+      if (Number(bookings[0]?.count ?? 0) > 0) throw new Error('Schedules with bookings cannot be deleted. Cancel the schedule instead.');
+      const route = await tx`SELECT route_id FROM schedules WHERE id = ${id};`;
+      const deleted = await tx`DELETE FROM schedules WHERE id = ${id} RETURNING id;`;
+      if (!deleted[0]) throw new Error('Schedule not found.');
+      if (route[0]) await tx`DELETE FROM routes WHERE id = ${route[0].route_id};`;
     });
-
     return Response.json({ success: true, id });
   } catch (error) {
-    return jsonError(error instanceof Error ? error.message : 'Failed to delete route', 500);
+    return jsonError(error instanceof Error ? error.message : 'Failed to delete schedule', 500);
   }
 }

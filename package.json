@@ -2,7 +2,10 @@
   "private": true,
   "scripts": {
     "build": "next build",
+    "db:backup": "node scripts/db-backup.js",
     "db:check": "node scripts/db-check.js",
+    "db:migrate": "node scripts/db-migrate.js",
+    "db:seed:staff": "node scripts/db-seed-staff.js",
     "dev": "next dev --turbopack",
     "start": "next start"
   },

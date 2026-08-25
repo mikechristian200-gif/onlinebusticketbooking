@@ -40,3 +40,6 @@ runtime-server*.log
 screenshots-server*.log
 tmp-*.js
 *.js.bak
+
+# database backups are generated locally and must not be committed
+backups/

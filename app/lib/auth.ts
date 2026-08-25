@@ -77,46 +77,7 @@ function decodeSession<T>(value: string): T | null {
   }
 }
 
-export async function ensureAuthTables() {
-  await sql`
-    CREATE TABLE IF NOT EXISTS staff_users (
-      id TEXT PRIMARY KEY DEFAULT gen_random_uuid()::text,
-      name TEXT NOT NULL,
-      email TEXT NOT NULL UNIQUE,
-      password_hash TEXT NOT NULL,
-      role TEXT NOT NULL CHECK (role IN ('admin', 'manager', 'driver')),
-      created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
-    );
-  `;
-
-  await sql`
-    CREATE TABLE IF NOT EXISTS customers (
-      id TEXT PRIMARY KEY DEFAULT gen_random_uuid()::text,
-      name TEXT NOT NULL,
-      email TEXT NOT NULL UNIQUE,
-      password_hash TEXT NOT NULL,
-      phone TEXT NOT NULL,
-      created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-      updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
-    );
-  `;
-
-  for (const user of getInitialUsers()) {
-    const existing = await sql`
-      SELECT id FROM staff_users WHERE email = ${user.email} LIMIT 1;
-    `;
-
-    if (!existing[0]) {
-      await sql`
-        INSERT INTO staff_users (name, email, password_hash, role)
-        VALUES (${user.name}, ${user.email}, ${hashPassword(user.password)}, ${user.role});
-      `;
-    }
-  }
-}
-
 export async function getAllUsers() {
-  await ensureAuthTables();
   const rows = await sql`SELECT id, name, email, role FROM staff_users ORDER BY name ASC;`;
   return rows.map((row) => ({
     id: row.id,
@@ -139,8 +100,6 @@ export async function createAccount(input: { name: string; email: string; passwo
     throw new Error('Password must be at least 6 characters long.');
   }
 
-  await ensureAuthTables();
-
   const existing = await sql`
     SELECT id FROM staff_users WHERE email = ${email} LIMIT 1;
   `;
@@ -150,8 +109,8 @@ export async function createAccount(input: { name: string; email: string; passwo
   }
 
   const rows = await sql`
-    INSERT INTO staff_users (name, email, password_hash, role)
-    VALUES (${name}, ${email}, ${hashPassword(password)}, ${input.role})
+    INSERT INTO staff_users (name, email, password_hash, role, role_id)
+    VALUES (${name}, ${email}, ${hashPassword(password)}, ${input.role}, ${input.role})
     RETURNING id, name, email, role;
   `;
 
@@ -166,8 +125,6 @@ export async function createAccount(input: { name: string; email: string; passwo
 
 export async function validateCredentials(email: string, password: string): Promise<AppUser | null> {
   const normalizedEmail = email.trim().toLowerCase();
-  await ensureAuthTables();
-
   const rows = await sql`
     SELECT id, name, email, role, password_hash
     FROM staff_users
@@ -227,7 +184,6 @@ export async function clearSession() {
 }
 
 export async function getCurrentUser(): Promise<AppUser | null> {
-  await ensureAuthTables();
   const cookieStore = await cookies();
   const sessionCookie = cookieStore.get(SESSION_COOKIE)?.value;
 
@@ -287,8 +243,6 @@ export async function createCustomerAccount(input: {
     throw new Error('Phone number must be at least 7 characters long.');
   }
 
-  await ensureAuthTables();
-
   const existing = await sql`
     SELECT id FROM customers WHERE email = ${email} LIMIT 1;
   `;
@@ -316,8 +270,6 @@ export async function validateCustomerCredentials(
   password: string,
 ): Promise<Customer | null> {
   const normalizedEmail = email.trim().toLowerCase();
-  await ensureAuthTables();
-
   const rows = await sql`
     SELECT id, name, email, phone, password_hash
     FROM customers
@@ -364,7 +316,6 @@ export async function clearCustomerSession() {
 }
 
 export async function getCurrentCustomer(): Promise<Customer | null> {
-  await ensureAuthTables();
   const cookieStore = await cookies();
   const sessionCookie = cookieStore.get(CUSTOMER_SESSION_COOKIE)?.value;
 

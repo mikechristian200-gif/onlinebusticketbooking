@@ -1,9 +1,7 @@
-import { ensureBookingTables, sql } from '@/app/lib/db';
+import { sql } from '@/app/lib/db';
 
 export async function GET() {
   try {
-    await ensureBookingTables();
-
     const buses = [
       { id: 'bus-southwest', name: 'Golden Express Southwest', type: 'standard', capacity: 6, amenities: ['Wi-Fi', 'Air conditioning', 'Reclining seats'] },
       { id: 'bus-kumba', name: 'Golden Express Kumba Line', type: 'standard', capacity: 6, amenities: ['USB charging', 'Snacks', 'Reading lights'] },
@@ -63,9 +61,16 @@ export async function GET() {
 
     for (const route of routes) {
       await sql`
-        INSERT INTO routes (id, bus_id, origin, destination, date, departure, arrival, duration, bus_name, price, amenities)
-        VALUES (${route.id}, ${route.bus_id}, ${route.origin}, ${route.destination}, ${route.date}, ${route.departure}, ${route.arrival}, ${route.duration}, ${route.bus_name}, ${route.price}, ${sql.json(route.amenities)})
-        ON CONFLICT (id) DO UPDATE SET bus_id = EXCLUDED.bus_id;
+        INSERT INTO routes (id, origin, destination)
+        VALUES (${route.id}, ${route.origin}, ${route.destination})
+        ON CONFLICT (id) DO UPDATE SET origin = EXCLUDED.origin, destination = EXCLUDED.destination, updated_at = now();
+      `;
+      await sql`
+        INSERT INTO schedules (id, route_id, bus_id, travel_date, departure, arrival, duration, price, amenities)
+        VALUES (${route.id}, ${route.id}, ${route.bus_id}, ${route.date}, ${route.departure}, ${route.arrival}, ${route.duration}, ${route.price}, ${sql.json(route.amenities)})
+        ON CONFLICT (id) DO UPDATE SET bus_id = EXCLUDED.bus_id, travel_date = EXCLUDED.travel_date,
+          departure = EXCLUDED.departure, arrival = EXCLUDED.arrival, duration = EXCLUDED.duration,
+          price = EXCLUDED.price, amenities = EXCLUDED.amenities, updated_at = now();
       `;
 
       const seats = [
@@ -79,9 +84,9 @@ export async function GET() {
 
       for (const seat of seats) {
         await sql`
-          INSERT INTO seats (id, route_id, label, type, available, price)
+          INSERT INTO seats (id, schedule_id, label, type, available, price)
           VALUES (${seat.id}, ${route.id}, ${seat.id}, ${seat.id.endsWith('A') ? 'window' : 'aisle'}, ${seat.available}, ${route.price})
-          ON CONFLICT (id, route_id) DO NOTHING;
+          ON CONFLICT (schedule_id, id) DO NOTHING;
         `;
       }
     }

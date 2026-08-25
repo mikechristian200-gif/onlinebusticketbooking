@@ -1,4 +1,4 @@
-import { ensureBookingTables, sql } from '@/app/lib/db';
+import { sql } from '@/app/lib/db';
 import { Bus } from '@/app/lib/definitions';
 import { getCurrentUser } from '@/app/lib/auth';
 
@@ -14,7 +14,6 @@ export async function GET() {
   try {
     const denied = await requireAdmin();
     if (denied) return denied;
-    await ensureBookingTables();
     const buses = await sql<Bus[]>`
       SELECT 
         id,
@@ -57,7 +56,6 @@ export async function POST(req: Request) {
       );
     }
 
-    await ensureBookingTables();
     
     const busId = `bus-${Math.random().toString(36).slice(2, 10)}`;
     
@@ -109,7 +107,6 @@ export async function PUT(req: Request) {
       );
     }
 
-    await ensureBookingTables();
 
     const result = await sql<Bus[]>`
       UPDATE buses
@@ -153,7 +150,6 @@ export async function DELETE(req: Request) {
       return Response.json({ error: 'Bus ID is required' }, { status: 400 });
     }
 
-    await ensureBookingTables();
 
     const result = await sql`
       DELETE FROM buses

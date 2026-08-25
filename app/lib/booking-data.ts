@@ -1,51 +1,21 @@
 import { Booking, BusRoute, Seat } from './definitions';
-import { ensureBookingTables, sql } from './db';
+import { sql } from './db';
 
 const DEFAULT_SEARCH_LIMIT = 20;
 
 function normalizeSearchParam(value: string | string[] | undefined) {
-  if (Array.isArray(value)) {
-    return value[0] ?? '';
-  }
-  return value ?? '';
+  return Array.isArray(value) ? value[0] ?? '' : value ?? '';
 }
 
 function normalizeDateValue(value: unknown) {
-  if (value instanceof Date) {
-    const time = value.getTime();
-    if (!Number.isNaN(time)) {
-      return value.toISOString().slice(0, 10);
-    }
-    return '';
-  }
-
+  if (value instanceof Date) return value.toISOString().slice(0, 10);
   if (typeof value === 'string') {
-    const trimmed = value.trim();
-    if (!trimmed) {
-      return '';
-    }
-
-    const match = trimmed.match(/^\d{4}-\d{2}-\d{2}/);
-    if (match) {
-      return match[0];
-    }
-
-    const time = new Date(trimmed).getTime();
-    if (!Number.isNaN(time)) {
-      return new Date(trimmed).toISOString().slice(0, 10);
-    }
-
-    return trimmed;
-  }
-
-  if (typeof value === 'number' && Number.isFinite(value)) {
+    const match = value.trim().match(/^\d{4}-\d{2}-\d{2}/);
+    if (match) return match[0];
     const time = new Date(value).getTime();
-    if (!Number.isNaN(time)) {
-      return new Date(value).toISOString().slice(0, 10);
-    }
+    return Number.isNaN(time) ? value.trim() : new Date(value).toISOString().slice(0, 10);
   }
-
-  return String(value ?? '');
+  return '';
 }
 
 function serializeRouteRow(row: any): BusRoute {
@@ -58,21 +28,19 @@ function serializeRouteRow(row: any): BusRoute {
     departure: row.departure,
     arrival: row.arrival,
     duration: row.duration,
-    busName: row.bus_name,
+    busName: row.bus_name ?? 'Unassigned bus',
     price: Number(row.price),
     amenities: row.amenities ?? [],
     status: row.status ?? 'scheduled',
     driverId: row.driver_id ?? null,
     driverName: row.driver_name ?? null,
-    seats: Array.isArray(row.seats)
-      ? row.seats.map((seat: any) => ({
-          id: seat.id,
-          label: seat.label,
-          type: seat.type,
-          available: seat.available,
-          price: Number(seat.price),
-        }))
-      : [],
+    seats: Array.isArray(row.seats) ? row.seats.map((seat: any) => ({
+      id: seat.id,
+      label: seat.label,
+      type: seat.type,
+      available: seat.available,
+      price: Number(seat.price),
+    })) : [],
   };
 }
 
@@ -97,334 +65,144 @@ function serializeBookingRow(row: any): Booking {
       departure: row.departure,
       arrival: row.arrival,
       duration: row.duration,
-      busName: row.bus_name,
+      busName: row.bus_name ?? 'Unassigned bus',
       price: Number(row.route_price),
       amenities: row.amenities ?? [],
     },
-    seats: Array.isArray(row.seat_details)
-      ? row.seat_details.map((seat: any) => ({
-          id: seat.id,
-          label: seat.label,
-          type: seat.type,
-          available: seat.available,
-          price: Number(seat.price),
-        }))
-      : [],
+    seats: Array.isArray(row.seat_details) ? row.seat_details.map((seat: any) => ({
+      id: seat.id,
+      label: seat.label,
+      type: seat.type,
+      available: seat.available,
+      price: Number(seat.price),
+    })) : [],
   };
 }
 
-export async function getBusRoutes(searchParams?: {
-  from?: string | string[];
-  to?: string | string[];
-  date?: string | string[];
-}) {
-  await ensureBookingTables();
+const routeSeatJson = (scheduleAlias: string) => `COALESCE((
+  SELECT json_agg(json_build_object(
+    'id', seat_rows.id,
+    'label', seat_rows.label,
+    'type', seat_rows.type,
+    'available', seat_rows.available,
+    'price', seat_rows.price
+  ) ORDER BY seat_rows.id)
+  FROM seats seat_rows WHERE seat_rows.schedule_id = ${scheduleAlias}.id
+), '[]'::json) AS seats`;
+
+const bookingSeatJson = `COALESCE((
+  SELECT json_agg(json_build_object(
+    'id', selected_seats.id,
+    'label', selected_seats.label,
+    'type', selected_seats.type,
+    'available', selected_seats.available,
+    'price', selected_seats.price
+  ) ORDER BY selected_seats.id)
+  FROM booking_seats selected_booking_seats
+  JOIN seats selected_seats ON selected_seats.schedule_id = bookings.schedule_id
+    AND selected_seats.id = selected_booking_seats.seat_id
+  WHERE selected_booking_seats.booking_id = bookings.id
+), '[]'::json) AS seat_details`;
+
+export async function getBusRoutes(searchParams?: { from?: string | string[]; to?: string | string[]; date?: string | string[] }) {
   const from = normalizeSearchParam(searchParams?.from).trim().toLowerCase();
   const to = normalizeSearchParam(searchParams?.to).trim().toLowerCase();
-  const rawDate = normalizeSearchParam(searchParams?.date).trim();
-  const date = normalizeDateValue(rawDate);
-
-  const rows = date
-    ? await sql`
-      SELECT
-        routes.id,
-        routes.bus_id,
-        routes.origin,
-        routes.destination,
-        routes.date,
-        routes.departure,
-        routes.arrival,
-        routes.duration,
-        routes.bus_name,
-        routes.price,
-        routes.amenities,
-        routes.status,
-        routes.driver_id,
-        COALESCE(
-          json_agg(json_build_object(
-            'id', seats.id,
-            'label', seats.label,
-            'type', seats.type,
-            'available', seats.available,
-            'price', seats.price
-          ) ORDER BY seats.id) FILTER (WHERE seats.id IS NOT NULL), '[]'
-        ) AS seats
-      FROM routes
-      LEFT JOIN seats ON seats.route_id = routes.id
-      WHERE
-        (${from} = '' OR LOWER(routes.origin) LIKE ${`%${from}%`})
-        AND (${to} = '' OR LOWER(routes.destination) LIKE ${`%${to}%`})
-        AND routes.status NOT IN ('cancelled', 'completed')
-        AND routes.date = ${date}::date
-      GROUP BY routes.id
-      ORDER BY routes.date ASC
-      LIMIT ${DEFAULT_SEARCH_LIMIT};
-    `
-    : await sql`
-      SELECT
-        routes.id,
-        routes.bus_id,
-        routes.origin,
-        routes.destination,
-        routes.date,
-        routes.departure,
-        routes.arrival,
-        routes.duration,
-        routes.bus_name,
-        routes.price,
-        routes.amenities,
-        routes.status,
-        routes.driver_id,
-        COALESCE(
-          json_agg(json_build_object(
-            'id', seats.id,
-            'label', seats.label,
-            'type', seats.type,
-            'available', seats.available,
-            'price', seats.price
-          ) ORDER BY seats.id) FILTER (WHERE seats.id IS NOT NULL), '[]'
-        ) AS seats
-      FROM routes
-      LEFT JOIN seats ON seats.route_id = routes.id
-      WHERE
-        (${from} = '' OR LOWER(routes.origin) LIKE ${`%${from}%`})
-        AND (${to} = '' OR LOWER(routes.destination) LIKE ${`%${to}%`})
-        AND routes.status NOT IN ('cancelled', 'completed')
-      GROUP BY routes.id
-      ORDER BY routes.date ASC
-      LIMIT ${DEFAULT_SEARCH_LIMIT};
-    `;
-
+  const date = normalizeDateValue(normalizeSearchParam(searchParams?.date).trim());
+  const select = `
+    SELECT s.id, s.bus_id, r.origin, r.destination, s.travel_date AS date,
+      s.departure, s.arrival, s.duration, b.name AS bus_name, s.price,
+      s.amenities, s.status, s.driver_id,
+      ${routeSeatJson('s')}
+    FROM schedules s
+    JOIN routes r ON r.id = s.route_id
+    LEFT JOIN buses b ON b.id = s.bus_id
+    WHERE ($1 = '' OR LOWER(r.origin) LIKE $2)
+      AND ($3 = '' OR LOWER(r.destination) LIKE $4)
+      AND s.status NOT IN ('cancelled', 'completed')
+      ${date ? 'AND s.travel_date = $5::date' : ''}
+    ORDER BY s.travel_date ASC, s.departure ASC
+    LIMIT $${date ? 6 : 5}`;
+  const params = date ? [from, `%${from}%`, to, `%${to}%`, date, DEFAULT_SEARCH_LIMIT] : [from, `%${from}%`, to, `%${to}%`, DEFAULT_SEARCH_LIMIT];
+  const rows = await sql.unsafe(select, params);
   return rows.map(serializeRouteRow);
 }
 
 export async function getBusRouteById(id: string) {
-  await ensureBookingTables();
   const rows = await sql`
-    SELECT
-      routes.id,
-      routes.bus_id,
-      routes.origin,
-      routes.destination,
-      routes.date,
-      routes.departure,
-      routes.arrival,
-      routes.duration,
-      routes.bus_name,
-      routes.price,
-      routes.amenities,
-      routes.status,
-      routes.driver_id,
-      COALESCE(
-        json_agg(json_build_object(
-          'id', seats.id,
-          'label', seats.label,
-          'type', seats.type,
-          'available', seats.available,
-          'price', seats.price
-        ) ORDER BY seats.id) FILTER (WHERE seats.id IS NOT NULL), '[]'
-      ) AS seats
-    FROM routes
-    LEFT JOIN seats ON seats.route_id = routes.id
-    WHERE routes.id = ${id}
-    GROUP BY routes.id;
+    SELECT s.id, s.bus_id, r.origin, r.destination, s.travel_date AS date,
+      s.departure, s.arrival, s.duration, b.name AS bus_name, s.price,
+      s.amenities, s.status, s.driver_id,
+      COALESCE((SELECT json_agg(json_build_object('id', seats.id, 'label', seats.label, 'type', seats.type, 'available', seats.available, 'price', seats.price) ORDER BY seats.id) FROM seats WHERE seats.schedule_id = s.id), '[]'::json) AS seats
+    FROM schedules s
+    JOIN routes r ON r.id = s.route_id
+    LEFT JOIN buses b ON b.id = s.bus_id
+    WHERE s.id = ${id};
   `;
-
-  if (!rows[0]) {
-    return null;
-  }
-
-  return serializeRouteRow(rows[0]);
+  return rows[0] ? serializeRouteRow(rows[0]) : null;
 }
 
-export async function getBookingByReference(reference: string) {
-  await ensureBookingTables();
-  const rows = await sql`
-    SELECT
-      bookings.id,
-      bookings.reference,
-      bookings.route_id,
-      bookings.customer_id,
-      bookings.passenger_name,
-      bookings.passenger_email,
-      bookings.passenger_phone,
-      bookings.seats,
-      bookings.total_amount,
-      bookings.payment_method,
-      bookings.status,
-      bookings.created_at,
-      routes.origin,
-      routes.destination,
-      routes.date,
-      routes.departure,
-      routes.arrival,
-      routes.duration,
-      routes.bus_name,
-      routes.price AS route_price,
-      routes.amenities,
-      COALESCE(
-        json_agg(json_build_object(
-          'id', selected_seats.id,
-          'label', selected_seats.label,
-          'type', selected_seats.type,
-          'available', selected_seats.available,
-          'price', selected_seats.price
-        ) ORDER BY selected_seats.id) FILTER (WHERE selected_seats.id IS NOT NULL), '[]'
-      ) AS seat_details
-    FROM bookings
-    JOIN routes ON routes.id = bookings.route_id
-    LEFT JOIN LATERAL jsonb_array_elements_text(bookings.seats) booked_seat_ids(id) ON true
-    LEFT JOIN seats selected_seats
-      ON selected_seats.route_id = bookings.route_id
-      AND selected_seats.id = booked_seat_ids.id
-    WHERE bookings.reference = ${reference}
-    GROUP BY bookings.id, routes.id;
-  `;
+const bookingSelect = `
+  SELECT bookings.id, bookings.reference, bookings.schedule_id AS route_id,
+    bookings.customer_id, bookings.passenger_name, bookings.passenger_email,
+    bookings.passenger_phone, bookings.total_amount, bookings.payment_method,
+    bookings.status, bookings.created_at, r.origin, r.destination,
+    s.travel_date AS date, s.departure, s.arrival, s.duration,
+    b.name AS bus_name, s.price AS route_price, s.amenities,
+    ${bookingSeatJson}
+  FROM bookings
+  JOIN schedules s ON s.id = bookings.schedule_id
+  JOIN routes r ON r.id = s.route_id
+  LEFT JOIN buses b ON b.id = s.bus_id`;
 
+export async function getBookingByReference(reference: string) {
+  const rows = await sql.unsafe(`${bookingSelect} WHERE bookings.reference = $1 LIMIT 1`, [reference]);
   return rows[0] ? serializeBookingRow(rows[0]) : null;
 }
 
 export async function getBookings() {
-  await ensureBookingTables();
-  const rows = await sql`
-    SELECT
-      bookings.id,
-      bookings.reference,
-      bookings.route_id,
-      bookings.customer_id,
-      bookings.passenger_name,
-      bookings.passenger_email,
-      bookings.passenger_phone,
-      bookings.seats,
-      bookings.total_amount,
-      bookings.payment_method,
-      bookings.status,
-      bookings.created_at,
-      routes.origin,
-      routes.destination,
-      routes.date,
-      routes.departure,
-      routes.arrival,
-      routes.duration,
-      routes.bus_name,
-      routes.price AS route_price,
-      routes.amenities,
-      COALESCE(
-        json_agg(json_build_object(
-          'id', selected_seats.id,
-          'label', selected_seats.label,
-          'type', selected_seats.type,
-          'available', selected_seats.available,
-          'price', selected_seats.price
-        ) ORDER BY selected_seats.id) FILTER (WHERE selected_seats.id IS NOT NULL), '[]'
-      ) AS seat_details
-    FROM bookings
-    JOIN routes ON routes.id = bookings.route_id
-    LEFT JOIN LATERAL jsonb_array_elements_text(bookings.seats) booked_seat_ids(id) ON true
-    LEFT JOIN seats selected_seats
-      ON selected_seats.route_id = bookings.route_id
-      AND selected_seats.id = booked_seat_ids.id
-    GROUP BY bookings.id, routes.id
-    ORDER BY bookings.created_at DESC
-    LIMIT 100;
-  `;
-
+  const rows = await sql.unsafe(`${bookingSelect} ORDER BY bookings.created_at DESC LIMIT 100`);
   return rows.map(serializeBookingRow);
 }
 
 export async function getAdminMetrics() {
-  await ensureBookingTables();
   const rows = await sql`
     SELECT
       (SELECT COALESCE(SUM(total_amount), 0)::int FROM bookings WHERE status <> 'cancelled') AS sales,
       (SELECT COUNT(*)::int FROM bookings WHERE status <> 'cancelled') AS bookings,
-      (SELECT COUNT(*)::int FROM routes WHERE date >= CURRENT_DATE AND status IN ('scheduled', 'boarding')) AS active_routes,
-      (SELECT COUNT(*)::int FROM routes WHERE date = CURRENT_DATE AND status = 'cancelled') AS cancelled_today;
+      (SELECT COUNT(*)::int FROM schedules WHERE travel_date >= CURRENT_DATE AND status IN ('scheduled', 'boarding')) AS active_routes,
+      (SELECT COUNT(*)::int FROM schedules WHERE travel_date = CURRENT_DATE AND status = 'cancelled') AS cancelled_today;
   `;
   return rows[0];
 }
 
 export async function getManagerMetrics() {
-  await ensureBookingTables();
   const rows = await sql`
     SELECT
-      (SELECT COUNT(*)::int FROM routes WHERE date = CURRENT_DATE AND status IN ('boarding', 'departed')) AS fleet_on_route,
-      (SELECT COUNT(*)::int FROM bookings b JOIN routes r ON r.id = b.route_id WHERE b.created_at::date = CURRENT_DATE AND b.status <> 'cancelled') AS tickets_today,
-      (SELECT COUNT(*)::int FROM routes WHERE date = CURRENT_DATE AND delay_minutes > 0) AS late_departures;
+      (SELECT COUNT(*)::int FROM schedules WHERE travel_date = CURRENT_DATE AND status IN ('boarding', 'departed')) AS fleet_on_route,
+      (SELECT COUNT(*)::int FROM bookings b JOIN schedules s ON s.id = b.schedule_id WHERE b.created_at::date = CURRENT_DATE AND b.status <> 'cancelled') AS tickets_today,
+      (SELECT COUNT(*)::int FROM schedules WHERE travel_date = CURRENT_DATE AND delay_minutes > 0) AS late_departures;
   `;
   return rows[0];
 }
 
 export async function getDriverTrip(driverId: string) {
-  await ensureBookingTables();
   const rows = await sql`
-    SELECT
-      routes.id,
-      routes.origin,
-      routes.destination,
-      routes.date,
-      routes.departure,
-      routes.arrival,
-      routes.status,
-      routes.bus_name,
-      COUNT(seats.id)::int AS total_seats,
+    SELECT s.id, r.origin, r.destination, s.travel_date AS date, s.departure, s.arrival,
+      s.status, b.name AS bus_name, COUNT(seats.id)::int AS total_seats,
       COUNT(seats.id) FILTER (WHERE seats.available = false)::int AS occupied_seats
-    FROM routes
-    LEFT JOIN seats ON seats.route_id = routes.id
-    WHERE routes.driver_id = ${driverId}
-      AND routes.date >= CURRENT_DATE
-      AND routes.status <> 'cancelled'
-    GROUP BY routes.id
-    ORDER BY routes.date ASC, routes.departure ASC
+    FROM schedules s
+    JOIN routes r ON r.id = s.route_id
+    LEFT JOIN buses b ON b.id = s.bus_id
+    LEFT JOIN seats ON seats.schedule_id = s.id
+    WHERE s.driver_id = ${driverId} AND s.travel_date >= CURRENT_DATE AND s.status <> 'cancelled'
+    GROUP BY s.id, r.id, b.name
+    ORDER BY s.travel_date ASC, s.departure ASC
     LIMIT 1;
   `;
   return rows[0] ?? null;
 }
 
 export async function getCustomerBookings(customerId: string) {
-  await ensureBookingTables();
-  const rows = await sql`
-    SELECT
-      bookings.id,
-      bookings.reference,
-      bookings.route_id,
-      bookings.customer_id,
-      bookings.passenger_name,
-      bookings.passenger_email,
-      bookings.passenger_phone,
-      bookings.seats,
-      bookings.total_amount,
-      bookings.payment_method,
-      bookings.status,
-      bookings.created_at,
-      routes.origin,
-      routes.destination,
-      routes.date,
-      routes.departure,
-      routes.arrival,
-      routes.duration,
-      routes.bus_name,
-      routes.price AS route_price,
-      routes.amenities,
-      COALESCE(
-        json_agg(json_build_object(
-          'id', selected_seats.id,
-          'label', selected_seats.label,
-          'type', selected_seats.type,
-          'available', selected_seats.available,
-          'price', selected_seats.price
-        ) ORDER BY selected_seats.id) FILTER (WHERE selected_seats.id IS NOT NULL), '[]'
-      ) AS seat_details
-    FROM bookings
-    JOIN routes ON routes.id = bookings.route_id
-    LEFT JOIN LATERAL jsonb_array_elements_text(bookings.seats) booked_seat_ids(id) ON true
-    LEFT JOIN seats selected_seats
-      ON selected_seats.route_id = bookings.route_id
-      AND selected_seats.id = booked_seat_ids.id
-    WHERE bookings.customer_id = ${customerId}
-    GROUP BY bookings.id, routes.id
-    ORDER BY bookings.created_at DESC
-    LIMIT 100;
-  `;
+  const rows = await sql.unsafe(`${bookingSelect} WHERE bookings.customer_id = $1 ORDER BY bookings.created_at DESC LIMIT 100`, [customerId]);
   return rows.map(serializeBookingRow);
 }

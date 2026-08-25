@@ -1,4 +1,4 @@
-import { ensureAuthTables, getCurrentUser } from '@/app/lib/auth';
+import { getCurrentUser } from '@/app/lib/auth';
 
 export async function GET() {
   const user = await getCurrentUser();
@@ -9,7 +9,6 @@ export async function GET() {
 
   try {
     const { sql } = await import('@/app/lib/db');
-    await ensureAuthTables();
     const drivers = await sql`
       SELECT id, name, email
       FROM staff_users
