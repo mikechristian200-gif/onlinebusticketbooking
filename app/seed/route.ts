@@ -27,7 +27,7 @@ export async function GET() {
         arrival: '10:45 AM',
         duration: '2h 15m',
         bus_name: 'Golden Express Southwest',
-        price: 4500,
+        price: 1000,
         amenities: ['Wi-Fi', 'Air conditioning', 'Reclining seats'],
         bus_id: 'bus-southwest',
       },
@@ -56,6 +56,42 @@ export async function GET() {
         price: 6300,
         amenities: ['Restroom', 'Large luggage', 'Climate control'],
         bus_id: 'bus-coastal',
+      },
+      {
+        id: 'route-4', origin: 'Buea', destination: 'Limbe', date: sampleDate,
+        departure: '11:00 AM', arrival: '01:15 PM', duration: '2h 15m',
+        bus_name: 'Golden Express Southwest', price: 1000,
+        amenities: ['Wi-Fi', 'Air conditioning', 'Reclining seats'], bus_id: 'bus-southwest',
+      },
+      {
+        id: 'route-5', origin: 'Kumba', destination: 'Douala', date: sampleDate,
+        departure: '06:30 AM', arrival: '09:00 AM', duration: '2h 30m',
+        bus_name: 'Golden Express Kumba Line', price: 4000,
+        amenities: ['USB charging', 'Snacks', 'Reading lights'], bus_id: 'bus-kumba',
+      },
+      {
+        id: 'route-6', origin: 'Douala', destination: 'Kumba', date: sampleDate,
+        departure: '03:00 PM', arrival: '05:30 PM', duration: '2h 30m',
+        bus_name: 'Golden Express Kumba Line', price: 4000,
+        amenities: ['USB charging', 'Snacks', 'Reading lights'], bus_id: 'bus-kumba',
+      },
+      {
+        id: 'route-7', origin: 'Kumba', destination: 'Limbe', date: sampleDate,
+        departure: '07:00 AM', arrival: '09:30 AM', duration: '2h 30m',
+        bus_name: 'Golden Express Coastal', price: 3000,
+        amenities: ['Restroom', 'Large luggage', 'Climate control'], bus_id: 'bus-coastal',
+      },
+      {
+        id: 'route-8', origin: 'Buea', destination: 'Douala', date: sampleDate,
+        departure: '08:00 AM', arrival: '01:00 PM', duration: '5h',
+        bus_name: 'Golden Express Coastal', price: 25000,
+        amenities: ['Restroom', 'Large luggage', 'Climate control'], bus_id: 'bus-coastal',
+      },
+      {
+        id: 'route-9', origin: 'Douala', destination: 'Buea', date: sampleDate,
+        departure: '02:00 PM', arrival: '07:00 PM', duration: '5h',
+        bus_name: 'Golden Express Coastal', price: 25000,
+        amenities: ['Restroom', 'Large luggage', 'Climate control'], bus_id: 'bus-coastal',
       },
     ];
 

@@ -45,7 +45,7 @@ export default function Page() {
           </nav>
           <div className="flex items-center gap-3">
             <Link
-              href="/login"
+              href="/customer-login"
               className="inline-flex items-center rounded-full border border-white/20 bg-white/5 px-4 py-2 text-sm font-semibold text-white transition hover:bg-white/10"
             >
               Login
@@ -82,17 +82,11 @@ export default function Page() {
                 <ArrowRightIcon className="h-4 w-4" />
               </Link>
               <Link
-                href="/login"
+                href="/customer-login"
                 className="inline-flex items-center rounded-full border border-white/20 bg-white/5 px-6 py-3 font-semibold text-white transition hover:bg-white/10"
               >
-                Staff login
+                Customer login
               </Link>
-            </div>
-
-            <div className="mt-6 flex flex-wrap gap-3">
-              <Link href="/login?role=admin" className="rounded-full bg-white/10 px-4 py-2 text-sm font-medium text-white ring-1 ring-white/20 transition hover:bg-white/15">Admin login</Link>
-              <Link href="/login?role=manager" className="rounded-full bg-white/10 px-4 py-2 text-sm font-medium text-white ring-1 ring-white/20 transition hover:bg-white/15">Manager login</Link>
-              <Link href="/login?role=driver" className="rounded-full bg-white/10 px-4 py-2 text-sm font-medium text-white ring-1 ring-white/20 transition hover:bg-white/15">Driver login</Link>
             </div>
             <div className="mt-10 flex flex-wrap gap-6 text-sm text-slate-200">
               <div className="flex items-center gap-2">
