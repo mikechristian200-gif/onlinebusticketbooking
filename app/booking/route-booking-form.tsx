@@ -84,34 +84,49 @@ export default function RouteBookingForm({ busRoute }: { busRoute: BusRoute }) {
           <h2 className="text-xl font-semibold text-slate-900">Choose seats</h2>
           <p className="mt-2 text-sm text-slate-500">Pick one or more available seats for this trip.</p>
 
-          <div className="mt-5 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-            {busRoute.seats.map((seat) => {
+          <div className="mt-5 rounded-[2rem] border-4 border-slate-200 bg-slate-100 p-4 sm:p-6">
+            <div className="mb-5 flex items-center justify-between rounded-2xl bg-slate-800 px-4 py-3 text-sm font-semibold text-white">
+              <span>Front of bus</span>
+              <span className="rounded-lg bg-slate-700 px-3 py-1 text-xs uppercase tracking-[0.15em]">Driver</span>
+            </div>
+            <div className="grid grid-cols-[minmax(0,1fr)_minmax(0,1fr)_1.2rem_minmax(0,1fr)_minmax(0,1fr)] gap-2 sm:gap-3">
+            {busRoute.seats.map((seat, seatIndex) => {
               const isSelected = selectedSeats.includes(seat.id);
+              const columns = [1, 2, 4, 5];
               return (
                 <button
                   key={seat.id}
                   type="button"
                   onClick={() => handleSeatToggle(seat.id, seat.available)}
-                  className={`rounded-2xl border px-4 py-3 text-left text-sm transition ${
+                  aria-label={`${seat.label}, ${seat.available ? 'available' : 'sold out'}`}
+                  style={{ gridColumn: columns[seatIndex % 4], gridRow: Math.floor(seatIndex / 4) + 1 }}
+                  className={`min-h-24 rounded-2xl border-2 px-2 py-3 text-left text-sm transition sm:px-4 ${
                     seat.available
                       ? isSelected
-                        ? 'border-blue-500 bg-blue-50 text-slate-900'
-                        : 'border-slate-200 bg-slate-50 text-slate-700 hover:border-blue-400 hover:bg-white'
-                      : 'cursor-not-allowed border-slate-200 bg-slate-100 text-slate-400'
+                        ? 'border-blue-600 bg-blue-600 text-white shadow-lg shadow-blue-200'
+                        : 'border-emerald-300 bg-white text-slate-700 hover:border-blue-400 hover:bg-blue-50'
+                      : 'cursor-not-allowed border-slate-300 bg-slate-200 text-slate-400'
                   }`}
                 >
                   <div className="flex items-center justify-between">
                     <span className="font-semibold">{seat.label}</span>
-                    <span className="rounded-full bg-slate-200 px-2 py-0.5 text-[11px] uppercase tracking-[0.12em] text-slate-600">
+                    <span className={`hidden rounded-full px-2 py-0.5 text-[11px] uppercase tracking-[0.12em] sm:inline ${isSelected ? 'bg-blue-500 text-blue-50' : 'bg-slate-100 text-slate-600'}`}>
                       {seat.type}
                     </span>
                   </div>
-                  <p className="mt-2 text-sm text-slate-500">
-                    {seat.available ? formatFare(seat.price) : 'Sold out'}
+                  <p className={`mt-3 text-xs ${isSelected ? 'text-blue-100' : 'text-slate-500'}`}>
+                    {seat.available ? (isSelected ? 'Selected' : 'Available') : 'Sold out'}
                   </p>
                 </button>
               );
             })}
+            </div>
+            <div className="mt-5 flex flex-wrap gap-4 text-xs text-slate-600">
+              <span className="flex items-center gap-2"><span className="h-3 w-3 rounded border-2 border-emerald-300 bg-white" /> Available</span>
+              <span className="flex items-center gap-2"><span className="h-3 w-3 rounded bg-blue-600" /> Selected</span>
+              <span className="flex items-center gap-2"><span className="h-3 w-3 rounded border-2 border-slate-300 bg-slate-200" /> Sold out</span>
+              <span className="ml-auto text-slate-400">Aisle</span>
+            </div>
           </div>
         </div>
 
