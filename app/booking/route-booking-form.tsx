@@ -24,6 +24,9 @@ export default function RouteBookingForm({ busRoute }: { busRoute: BusRoute }) {
     }, 0);
   }, [busRoute.seats, selectedSeats]);
 
+  const frontSeats = busRoute.seats.slice(0, 2);
+  const rearSeats = busRoute.seats.slice(2);
+
   const handleSeatToggle = (seatId: string, available: boolean) => {
     if (!available) {
       return;
@@ -85,21 +88,41 @@ export default function RouteBookingForm({ busRoute }: { busRoute: BusRoute }) {
           <p className="mt-2 text-sm text-slate-500">Pick one or more available seats for this trip.</p>
 
           <div className="mt-5 rounded-[2rem] border-4 border-slate-200 bg-slate-100 p-4 sm:p-6">
-            <div className="mb-5 flex items-center justify-between rounded-2xl bg-slate-800 px-4 py-3 text-sm font-semibold text-white">
-              <span>Front of bus</span>
-              <span className="rounded-lg bg-slate-700 px-3 py-1 text-xs uppercase tracking-[0.15em]">Driver</span>
+            <div className="mb-5 rounded-2xl bg-slate-800 px-4 py-3 text-sm font-semibold text-white">
+              <div className="flex items-center justify-between">
+                <span>Front of bus</span>
+                <span className="rounded-lg bg-slate-700 px-3 py-1 text-xs uppercase tracking-[0.15em]">Driver</span>
+              </div>
+              <div className="mt-4 grid grid-cols-3 gap-2 sm:gap-3">
+                {frontSeats.map((seat) => {
+                  const isSelected = selectedSeats.includes(seat.id);
+                  return (
+                    <button
+                      key={seat.id}
+                      type="button"
+                      onClick={() => handleSeatToggle(seat.id, seat.available)}
+                      aria-label={`${seat.label}, ${seat.available ? 'available' : 'sold out'}`}
+                      className={`min-h-20 rounded-2xl border-2 px-2 py-3 text-left text-sm transition sm:px-4 ${seat.available ? isSelected ? 'border-blue-300 bg-blue-600 text-white' : 'border-emerald-300 bg-white text-slate-700 hover:bg-blue-50' : 'cursor-not-allowed border-slate-500 bg-slate-700 text-slate-400'}`}
+                    >
+                      <span className="font-semibold">{seat.label}</span>
+                      <p className={`mt-2 text-xs ${isSelected ? 'text-blue-100' : 'text-slate-500'}`}>{seat.available ? (isSelected ? 'Selected' : 'Available') : 'Sold out'}</p>
+                    </button>
+                  );
+                })}
+                <span className="flex min-h-20 items-center justify-center rounded-2xl border-2 border-dashed border-slate-600 text-center text-xs text-slate-400">Driver</span>
+              </div>
+              <p className="mt-3 text-center text-xs font-normal text-slate-300">Two passenger seats beside the driver</p>
             </div>
-            <div className="grid grid-cols-[minmax(0,1fr)_minmax(0,1fr)_1.2rem_minmax(0,1fr)_minmax(0,1fr)] gap-2 sm:gap-3">
-            {busRoute.seats.map((seat, seatIndex) => {
+            <p className="mb-3 text-center text-xs font-semibold uppercase tracking-[0.15em] text-slate-500">Rear passenger rows - four seats across</p>
+            <div className="grid grid-cols-4 gap-2 sm:gap-3">
+            {rearSeats.map((seat) => {
               const isSelected = selectedSeats.includes(seat.id);
-              const columns = [1, 2, 4, 5];
               return (
                 <button
                   key={seat.id}
                   type="button"
                   onClick={() => handleSeatToggle(seat.id, seat.available)}
                   aria-label={`${seat.label}, ${seat.available ? 'available' : 'sold out'}`}
-                  style={{ gridColumn: columns[seatIndex % 4], gridRow: Math.floor(seatIndex / 4) + 1 }}
                   className={`min-h-24 rounded-2xl border-2 px-2 py-3 text-left text-sm transition sm:px-4 ${
                     seat.available
                       ? isSelected
