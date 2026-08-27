@@ -6,6 +6,7 @@ import { ArrowRightIcon } from '@heroicons/react/24/outline';
 import { Button } from '@/app/ui/button';
 import { BusRoute } from '@/app/lib/definitions';
 import { formatFare } from '@/app/lib/utils';
+import ThreeDSeatMap from './three-d-seat-map';
 
 export default function RouteBookingForm({ busRoute }: { busRoute: BusRoute }) {
   const [selectedSeats, setSelectedSeats] = useState<string[]>([]);
@@ -84,7 +85,15 @@ export default function RouteBookingForm({ busRoute }: { busRoute: BusRoute }) {
           <h2 className="text-xl font-semibold text-slate-900">Choose seats</h2>
           <p className="mt-2 text-sm text-slate-500">Pick one or more available seats for this trip.</p>
 
-          <div className="mt-5 rounded-[2rem] border-4 border-slate-300 bg-slate-100 p-4 shadow-inner sm:p-6">
+          <div className="mt-5">
+            <ThreeDSeatMap
+              seats={busRoute.seats}
+              selectedSeatIds={selectedSeats}
+              onToggleSeat={handleSeatToggle}
+            />
+          </div>
+
+          <div className="mt-6 rounded-[2rem] border-4 border-slate-300 bg-slate-100 p-4 shadow-inner sm:p-6">
             <div className="mb-5 rounded-2xl bg-slate-800 px-4 py-3 text-sm font-semibold text-white">
               <div className="flex items-center justify-between">
                 <span>Front of bus</span>
