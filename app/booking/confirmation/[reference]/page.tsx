@@ -119,10 +119,10 @@ export default async function BookingConfirmationPage({
             Book another trip
           </Link>
           <Link
-            href="/admin/bookings"
+            href={isStaff ? '/admin/bookings' : '/customer/bookings'}
             className="inline-flex items-center justify-center rounded-2xl bg-white px-5 py-3 text-sm font-semibold text-slate-700 ring-1 ring-slate-200 transition hover:bg-slate-50"
           >
-            View bookings
+            {isStaff ? 'View bookings' : 'My bookings'}
           </Link>
         </div>
       </div>
