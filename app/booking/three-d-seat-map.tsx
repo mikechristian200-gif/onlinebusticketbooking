@@ -42,18 +42,21 @@ export default function ThreeDSeatMap({ seats, selectedSeatIds, onToggleSeat }: 
     scene.background = new THREE.Color('#dcebe6');
     scene.fog = new THREE.Fog('#dcebe6', 9, 18);
 
-    const camera = new THREE.PerspectiveCamera(42, 1, 0.1, 100);
-    camera.position.set(5.8, 5.6, 7.8);
+    const camera = new THREE.PerspectiveCamera(38, 1, 0.1, 100);
+    camera.position.set(6.8, 5.8, 9.2);
 
     const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
     renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+    renderer.setClearColor('#dcebe6', 1);
     renderer.shadowMap.enabled = true;
     renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+    renderer.domElement.style.display = 'block';
+    renderer.domElement.style.width = '100%';
     mount.appendChild(renderer.domElement);
 
     const controls = new OrbitControls(camera, renderer.domElement);
     controls.enableDamping = true;
-    controls.target.set(0, 0.2, 0);
+    controls.target.set(0, 0.45, 0.8);
     controls.minDistance = 5;
     controls.maxDistance = 13;
     controls.maxPolarAngle = Math.PI / 2.05;
