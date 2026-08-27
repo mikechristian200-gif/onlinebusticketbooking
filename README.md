@@ -40,7 +40,7 @@ pnpm db:migrate
 pnpm db:check
 ```
 
-Email reminders use Resend: set `RESEND_API_KEY` and `NOTIFICATION_FROM_EMAIL`. SMS reminders use Twilio: set `TWILIO_ACCOUNT_SID`, `TWILIO_AUTH_TOKEN`, and `TWILIO_FROM_NUMBER`; customer phone numbers must include the international country code. The worker sends one email and/or SMS reminder approximately 24 hours and 1 hour before each confirmed trip, with database idempotency preventing duplicates. Test it manually with `curl -H "Authorization: Bearer $CRON_SECRET" https://your-domain/api/cron/departure-reminders` after configuring the provider.
+Email notifications use Resend: set `RESEND_API_KEY` and `NOTIFICATION_FROM_EMAIL`. The worker delivers booking confirmations, payment confirmations, and one departure reminder approximately 24 hours and 1 hour before each confirmed trip. Database idempotency prevents duplicate departure reminders. Test it manually with `curl -H "Authorization: Bearer $CRON_SECRET" https://your-domain/api/cron/departure-reminders` after configuring the provider.
 
 ## Schema
 

@@ -31,20 +31,6 @@ async function sendEmail(to: string, subject: string, text: string) {
   if (!response.ok) throw new Error(`Email provider returned ${response.status}.`);
 }
 
-async function sendSms(to: string, text: string) {
-  const accountSid = process.env.TWILIO_ACCOUNT_SID;
-  const authToken = process.env.TWILIO_AUTH_TOKEN;
-  const from = process.env.TWILIO_FROM_NUMBER;
-  if (!accountSid || !authToken || !from) throw new Error('SMS provider is not configured.');
-  const body = new URLSearchParams({ To: to, From: from, Body: text });
-  const response = await fetch(`https://api.twilio.com/2010-04-01/Accounts/${accountSid}/Messages.json`, {
-    method: 'POST',
-    headers: { Authorization: `Basic ${Buffer.from(`${accountSid}:${authToken}`).toString('base64')}`, 'Content-Type': 'application/x-www-form-urlencoded' },
-    body,
-  });
-  if (!response.ok) throw new Error(`SMS provider returned ${response.status}.`);
-}
-
 export async function queueDepartureReminders() {
   const reminders = await sql<Reminder[]>`
     SELECT b.id AS "bookingId", b.customer_id AS "customerId", b.reference,
@@ -77,15 +63,6 @@ export async function queueDepartureReminders() {
       `;
       queued += result.length;
     }
-    if (reminder.phone && process.env.TWILIO_ACCOUNT_SID && process.env.TWILIO_AUTH_TOKEN && process.env.TWILIO_FROM_NUMBER) {
-      const result = await sql`
-        INSERT INTO notifications (customer_id, booking_id, channel, notification_type, recipient, subject, body)
-        VALUES (${reminder.customerId}, ${reminder.bookingId}, 'sms', ${`departure_${reminder.reminderType}`}, ${reminder.phone}, NULL, ${text})
-        ON CONFLICT (booking_id, channel, notification_type) DO NOTHING
-        RETURNING id;
-      `;
-      queued += result.length;
-    }
   }
   return { eligible: reminders.length, queued };
 }
@@ -96,7 +73,7 @@ export async function deliverPendingReminders() {
     SET status = 'sent', sent_at = now()
     WHERE id IN (
       SELECT id FROM notifications
-      WHERE status = 'pending' AND notification_type IN ('departure_24h', 'departure_1h')
+      WHERE status = 'pending' AND channel = 'email'
       ORDER BY created_at ASC
       FOR UPDATE SKIP LOCKED
       LIMIT 50
@@ -107,8 +84,7 @@ export async function deliverPendingReminders() {
   let failed = 0;
   for (const notification of pending) {
     try {
-      if (notification.channel === 'email') await sendEmail(notification.recipient, notification.subject, notification.body);
-      if (notification.channel === 'sms') await sendSms(notification.recipient, notification.body);
+      await sendEmail(notification.recipient, notification.subject || 'Golden Express notification', notification.body);
       sent += 1;
     } catch (error) {
       failed += 1;
