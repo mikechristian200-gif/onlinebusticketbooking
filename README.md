@@ -40,7 +40,7 @@ pnpm db:migrate
 pnpm db:check
 ```
 
-Email notifications use Resend: set `RESEND_API_KEY` and `NOTIFICATION_FROM_EMAIL`. The worker delivers booking confirmations, payment confirmations, and one departure reminder approximately 24 hours and 1 hour before each confirmed trip. Database idempotency prevents duplicate departure reminders. Test it manually with `curl -H "Authorization: Bearer $CRON_SECRET" https://your-domain/api/cron/departure-reminders` after configuring the provider.
+Email notifications use Nodemailer over SMTP: set `SMTP_HOST`, `SMTP_PORT`, `SMTP_SECURE`, `SMTP_USER`, `SMTP_PASSWORD`, and `SMTP_FROM`. Brevo, Mailgun, or a domain email provider are suitable SMTP providers. Use port `465` with `SMTP_SECURE=true`, or port `587` with `SMTP_SECURE=false`. The worker delivers booking confirmations, payment confirmations, and one departure reminder approximately 24 hours and 1 hour before each confirmed trip. Database idempotency prevents duplicate departure reminders. Test it manually with `curl -H "Authorization: Bearer $CRON_SECRET" https://your-domain/api/cron/departure-reminders` after configuring the provider.
 
 ## Schema
 

@@ -1,4 +1,5 @@
 import { sql } from '@/app/lib/db';
+import nodemailer from 'nodemailer';
 
 type Reminder = {
   bookingId: number;
@@ -20,15 +21,18 @@ function reminderText(reminder: Reminder) {
 }
 
 async function sendEmail(to: string, subject: string, text: string) {
-  const apiKey = process.env.RESEND_API_KEY;
-  const from = process.env.NOTIFICATION_FROM_EMAIL;
-  if (!apiKey || !from) throw new Error('Email provider is not configured.');
-  const response = await fetch('https://api.resend.com/emails', {
-    method: 'POST',
-    headers: { Authorization: `Bearer ${apiKey}`, 'Content-Type': 'application/json' },
-    body: JSON.stringify({ from, to: [to], subject, text }),
+  const host = process.env.SMTP_HOST;
+  const user = process.env.SMTP_USER;
+  const password = process.env.SMTP_PASSWORD;
+  const from = process.env.SMTP_FROM || user;
+  if (!host || !user || !password || !from) throw new Error('SMTP email provider is not configured.');
+  const transporter = nodemailer.createTransport({
+    host,
+    port: Number(process.env.SMTP_PORT || 587),
+    secure: process.env.SMTP_SECURE === 'true',
+    auth: { user, pass: password },
   });
-  if (!response.ok) throw new Error(`Email provider returned ${response.status}.`);
+  await transporter.sendMail({ from, to, subject, text });
 }
 
 export async function queueDepartureReminders() {
@@ -54,7 +58,7 @@ export async function queueDepartureReminders() {
   for (const reminder of reminders) {
     const text = reminderText(reminder);
     const subject = `Trip reminder for ${reminder.reference}`;
-    if (process.env.RESEND_API_KEY && process.env.NOTIFICATION_FROM_EMAIL) {
+    if (process.env.SMTP_HOST && process.env.SMTP_USER && process.env.SMTP_PASSWORD) {
       const result = await sql`
         INSERT INTO notifications (customer_id, booking_id, channel, notification_type, recipient, subject, body)
         VALUES (${reminder.customerId}, ${reminder.bookingId}, 'email', ${`departure_${reminder.reminderType}`}, ${reminder.email}, ${subject}, ${text})
