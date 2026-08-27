@@ -74,19 +74,42 @@ export default function ThreeDSeatMap({ seats, selectedSeatIds, onToggleSeat }: 
     floor.receiveShadow = true;
     scene.add(floor);
 
-    const roof = new THREE.Mesh(
-      new THREE.BoxGeometry(5.25, 0.16, floor.geometry.parameters.depth),
-      new THREE.MeshStandardMaterial({ color: '#e85d3f', roughness: 0.6 }),
+    const body = new THREE.Mesh(
+      new THREE.BoxGeometry(5.1, 0.35, floor.geometry.parameters.depth),
+      new THREE.MeshStandardMaterial({ color: '#e85d3f', roughness: 0.55 }),
     );
-    roof.position.y = 3.3;
-    scene.add(roof);
+    body.position.y = 0.05;
+    body.castShadow = true;
+    scene.add(body);
 
-    const sideMaterial = new THREE.MeshStandardMaterial({ color: '#ffffff', transparent: true, opacity: 0.34, roughness: 0.25, metalness: 0.05 });
+    const sideMaterial = new THREE.MeshStandardMaterial({ color: '#e85d3f', roughness: 0.55 });
     for (const side of [-1, 1]) {
-      const wall = new THREE.Mesh(new THREE.BoxGeometry(0.12, 3.1, floor.geometry.parameters.depth), sideMaterial);
-      wall.position.set(side * 2.42, 1.55, 0);
-      scene.add(wall);
+      const rail = new THREE.Mesh(new THREE.BoxGeometry(0.18, 1.05, floor.geometry.parameters.depth), sideMaterial);
+      rail.position.set(side * 2.35, 0.8, 0);
+      rail.castShadow = true;
+      scene.add(rail);
     }
+
+    for (const side of [-1, 1]) {
+      for (const z of [-floor.geometry.parameters.depth / 2 + 1.1, floor.geometry.parameters.depth / 2 - 1.1]) {
+        const wheel = new THREE.Mesh(
+          new THREE.CylinderGeometry(0.58, 0.58, 0.3, 24),
+          new THREE.MeshStandardMaterial({ color: '#172b3d', roughness: 0.82 }),
+        );
+        wheel.rotation.z = Math.PI / 2;
+        wheel.position.set(side * 2.42, -0.2, z);
+        wheel.castShadow = true;
+        scene.add(wheel);
+      }
+    }
+
+    const windshield = new THREE.Mesh(
+      new THREE.BoxGeometry(3.6, 1.45, 0.08),
+      new THREE.MeshStandardMaterial({ color: '#8dd0d0', transparent: true, opacity: 0.75, roughness: 0.18, metalness: 0.1 }),
+    );
+    windshield.position.set(0, 1.75, floor.geometry.parameters.depth / 2 - 0.28);
+    windshield.rotation.x = -0.18;
+    scene.add(windshield);
 
     const driver = new THREE.Mesh(new THREE.BoxGeometry(1.35, 1.25, 0.92), new THREE.MeshStandardMaterial({ color: '#102a43', roughness: 0.55 }));
     driver.position.set(0, 0.7, floor.geometry.parameters.depth / 2 - 0.9);
@@ -109,15 +132,19 @@ export default function ThreeDSeatMap({ seats, selectedSeatIds, onToggleSeat }: 
       const isSelected = selectedSeatIds.includes(seat.id);
       const color = !seat.available ? '#9aa8a5' : isSelected ? '#e85d3f' : '#5eb89c';
       const material = new THREE.MeshStandardMaterial({ color, roughness: 0.62, metalness: 0.02 });
-      const seatMesh = new THREE.Mesh(new THREE.BoxGeometry(0.78, 0.42, 0.82), material);
+      const seatMesh = new THREE.Mesh(new THREE.BoxGeometry(0.78, 0.3, 0.72), material);
       seatMesh.position.set(x, 0.42, z);
       seatMesh.castShadow = true;
       seatMesh.userData.seatId = seat.id;
       seatMeshes.set(seatMesh, seat);
       scene.add(seatMesh);
+      const back = new THREE.Mesh(new THREE.BoxGeometry(0.78, 0.72, 0.16), material);
+      back.position.set(x, 0.72, z - 0.28);
+      back.castShadow = true;
+      scene.add(back);
       const label = createSeatLabel(seat);
       if (label) {
-        label.position.set(x, 0.95, z);
+        label.position.set(x, 1.15, z);
         scene.add(label);
       }
     });
