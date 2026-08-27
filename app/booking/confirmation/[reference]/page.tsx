@@ -4,6 +4,7 @@ import { getBookingByReference } from '@/app/lib/booking-data';
 import { getCurrentCustomer, getCurrentUser } from '@/app/lib/auth';
 import { formatFare } from '@/app/lib/utils';
 import PrintTicketButton from '@/app/ui/print-ticket-button';
+import DepartureCountdown from '../../departure-countdown';
 
 export const dynamic = 'force-dynamic';
 
@@ -109,6 +110,8 @@ export default async function BookingConfirmationPage({
             </div>
           </div>
         </section>
+
+        <DepartureCountdown date={booking.route.date} departure={booking.route.departure} reference={booking.reference} />
 
         <div className="flex flex-col gap-3 sm:flex-row">
           <PrintTicketButton />
