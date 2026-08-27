@@ -11,7 +11,7 @@ export default async function AdminBookingsPage() {
   const bookings = await getBookings();
 
   return (
-    <main className="min-h-screen bg-slate-50 px-6 py-10">
+    <main className="operations-page min-h-screen px-4 py-5 sm:px-6 sm:py-8">
       <div className="mx-auto max-w-6xl space-y-6">
         <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
           <div>
@@ -26,7 +26,7 @@ export default async function AdminBookingsPage() {
           </Link>
         </div>
 
-        <section className="overflow-hidden rounded-3xl bg-white shadow-sm ring-1 ring-slate-200">
+        <section className="overflow-hidden rounded-3xl bg-white shadow-xl shadow-slate-200/70 ring-1 ring-slate-200">
           <div className="hidden grid-cols-[1.1fr_1.4fr_1fr_1fr_0.8fr_1.2fr] gap-4 border-b border-slate-200 bg-slate-100 px-5 py-3 text-sm font-semibold text-slate-600 md:grid">
             <span>Reference</span>
             <span>Passenger</span>

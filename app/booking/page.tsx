@@ -19,13 +19,18 @@ export default async function BookingPage({
   const departureOptions = Array.from(new Set(availableRoutes.map((route) => route.departure))).sort();
 
   return (
-    <main className="min-h-screen bg-slate-50 px-6 py-10">
+    <main className="min-h-screen bg-[#eef3f1] px-4 py-4 sm:px-6 sm:py-7">
       <div className="mx-auto max-w-6xl space-y-6">
-        <div className="rounded-3xl bg-slate-900 px-8 py-10 text-white shadow-xl">
-          <h1 className="text-3xl font-semibold sm:text-4xl">Golden Express Bus Booking</h1>
-          <p className="mt-4 max-w-2xl text-slate-200">
+        <div className="relative overflow-hidden rounded-[2rem] bg-slate-900 px-7 py-12 text-white shadow-2xl sm:px-10 sm:py-16">
+          <div className="absolute inset-0 bg-[url('/hero-desktop.png')] bg-cover bg-center opacity-55" />
+          <div className="absolute inset-0 bg-gradient-to-r from-slate-950 via-slate-900/65 to-transparent" />
+          <div className="relative max-w-2xl">
+            <p className="text-xs font-bold uppercase tracking-[0.28em] text-orange-300">Travel further, simply</p>
+            <h1 className="mt-4 text-4xl font-black tracking-tight sm:text-6xl">Your next road story starts here.</h1>
+            <p className="mt-5 max-w-xl text-base leading-7 text-slate-200">
             Find and book bus routes across Cameroon, especially in the Southwest region.
-          </p>
+            </p>
+          </div>
         </div>
 
         <SearchForm routeOptions={routeOptions} departureOptions={departureOptions} />
@@ -44,7 +49,7 @@ export default async function BookingPage({
 
           <div className="grid gap-6 lg:grid-cols-3">
             {routes.map((route) => (
-              <div key={route.id} className="rounded-3xl bg-white p-6 shadow-sm ring-1 ring-slate-200">
+              <div key={route.id} className="group rounded-3xl bg-white p-6 shadow-sm ring-1 ring-slate-200 transition hover:-translate-y-1 hover:shadow-xl hover:shadow-slate-200">
                 <div className="flex items-start justify-between gap-4">
                   <div>
                     <p className="text-sm text-slate-500">{route.busName}</p>
@@ -52,7 +57,7 @@ export default async function BookingPage({
                       {route.origin} to {route.destination}
                     </h3>
                   </div>
-                  <p className="text-lg font-semibold text-blue-600">{formatFare(route.price)}</p>
+                  <p className="text-lg font-black text-[#e85d3f]">{formatFare(route.price)}</p>
                 </div>
 
                 <div className="mt-5 space-y-3 text-sm text-slate-600">
@@ -83,7 +88,7 @@ export default async function BookingPage({
 
                 <Link
                   href={`/booking/${route.id}`}
-                  className="mt-6 inline-flex w-full items-center justify-center rounded-2xl bg-blue-600 px-5 py-3 text-sm font-semibold text-white transition hover:bg-blue-500"
+                  className="mt-6 inline-flex w-full items-center justify-center rounded-2xl bg-slate-900 px-5 py-3 text-sm font-bold text-white transition group-hover:bg-[#e85d3f]"
                 >
                   Book seats
                 </Link>

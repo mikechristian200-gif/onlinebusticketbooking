@@ -9,9 +9,9 @@ export default async function DriverDashboardPage() {
   const trip = await getDriverTrip(user.id);
 
   return (
-    <main className="min-h-screen bg-slate-100 px-6 py-10">
+    <main className="operations-page min-h-screen px-4 py-5 sm:px-6 sm:py-8">
       <div className="mx-auto max-w-5xl">
-        <div className="rounded-3xl bg-emerald-700 p-8 text-white shadow-xl">
+        <div className="operations-hero rounded-[2rem] p-8 text-white shadow-2xl sm:p-10">
           <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
             <div>
               <p className="text-sm uppercase tracking-[0.24em] text-emerald-100">Driver dashboard</p>
@@ -27,15 +27,15 @@ export default async function DriverDashboardPage() {
         </div>
 
         <div className="mt-8 grid gap-6 md:grid-cols-3">
-          <div className="rounded-3xl bg-white p-6 shadow-sm ring-1 ring-slate-200">
+          <div className="metric-card rounded-3xl bg-white p-6">
             <p className="text-sm text-slate-500">Assigned route</p>
             <p className="mt-4 text-2xl font-bold text-slate-900">{trip ? `${trip.origin} - ${trip.destination}` : 'No route assigned'}</p>
           </div>
-          <div className="rounded-3xl bg-white p-6 shadow-sm ring-1 ring-slate-200">
+          <div className="metric-card rounded-3xl bg-white p-6">
             <p className="text-sm text-slate-500">Departure time</p>
             <p className="mt-4 text-2xl font-bold text-slate-900">{trip?.departure || '—'}</p>
           </div>
-          <div className="rounded-3xl bg-white p-6 shadow-sm ring-1 ring-slate-200">
+          <div className="metric-card rounded-3xl bg-white p-6">
             <p className="text-sm text-slate-500">Seat occupancy</p>
             <p className="mt-4 text-2xl font-bold text-slate-900">{trip && Number(trip.total_seats) > 0 ? `${Math.round((Number(trip.occupied_seats) / Number(trip.total_seats)) * 100)}%` : '—'}</p>
           </div>

@@ -9,9 +9,9 @@ export default async function AdminDashboardPage() {
   const metrics = await getAdminMetrics();
 
   return (
-    <main className="min-h-screen bg-slate-100 px-6 py-10">
+    <main className="operations-page min-h-screen px-4 py-5 sm:px-6 sm:py-8">
       <div className="mx-auto max-w-5xl">
-        <div className="rounded-3xl bg-slate-900 p-8 text-white shadow-xl">
+        <div className="operations-hero rounded-[2rem] p-8 text-white shadow-2xl sm:p-10">
           <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
             <div>
               <p className="text-sm uppercase tracking-[0.24em] text-blue-300">Admin dashboard</p>
@@ -27,24 +27,24 @@ export default async function AdminDashboardPage() {
         </div>
 
         <div className="mt-8 grid gap-6 md:grid-cols-3">
-          <div className="rounded-3xl bg-white p-6 shadow-sm ring-1 ring-slate-200">
+          <div className="metric-card rounded-3xl bg-white p-6">
             <p className="text-sm text-slate-500">Ticket sales</p>
             <p className="mt-4 text-3xl font-bold text-slate-900">{Number(metrics.sales).toLocaleString()} FCFA</p>
           </div>
-          <div className="rounded-3xl bg-white p-6 shadow-sm ring-1 ring-slate-200">
+          <div className="metric-card rounded-3xl bg-white p-6">
             <p className="text-sm text-slate-500">Active routes</p>
             <p className="mt-4 text-3xl font-bold text-slate-900">{Number(metrics.active_routes).toLocaleString()}</p>
           </div>
-          <div className="rounded-3xl bg-white p-6 shadow-sm ring-1 ring-slate-200">
+          <div className="metric-card rounded-3xl bg-white p-6">
             <p className="text-sm text-slate-500">Confirmed bookings</p>
             <p className="mt-4 text-3xl font-bold text-slate-900">{Number(metrics.bookings).toLocaleString()}</p>
           </div>
         </div>
 
-        <div className="mt-8 rounded-3xl bg-white p-6 shadow-sm ring-1 ring-slate-200">
+        <div className="mt-8 rounded-3xl bg-[#102a43] p-6 text-white shadow-xl">
           <h2 className="text-xl font-semibold text-slate-900">Quick actions</h2>
           <div className="mt-4 flex flex-wrap gap-4">
-            <a href="/admin/bookings" className="rounded-2xl bg-blue-600 px-5 py-3 text-sm font-semibold text-white hover:bg-blue-500">
+            <a href="/admin/bookings" className="rounded-2xl bg-[#e85d3f] px-5 py-3 text-sm font-semibold text-white hover:bg-orange-500">
               View bookings
             </a>
             <a href="/admin/buses" className="rounded-2xl bg-blue-600 px-5 py-3 text-sm font-semibold text-white hover:bg-blue-500">

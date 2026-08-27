@@ -9,9 +9,9 @@ export default async function ManagerDashboardPage() {
   const metrics = await getManagerMetrics();
 
   return (
-    <main className="min-h-screen bg-slate-100 px-6 py-10">
+    <main className="operations-page min-h-screen px-4 py-5 sm:px-6 sm:py-8">
       <div className="mx-auto max-w-5xl">
-        <div className="rounded-3xl bg-cyan-700 p-8 text-white shadow-xl">
+        <div className="operations-hero rounded-[2rem] p-8 text-white shadow-2xl sm:p-10">
           <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
             <div>
               <p className="text-sm uppercase tracking-[0.24em] text-cyan-100">Manager dashboard</p>
@@ -27,15 +27,15 @@ export default async function ManagerDashboardPage() {
         </div>
 
         <div className="mt-8 grid gap-6 md:grid-cols-3">
-          <div className="rounded-3xl bg-white p-6 shadow-sm ring-1 ring-slate-200">
+          <div className="metric-card rounded-3xl bg-white p-6">
             <p className="text-sm text-slate-500">Fleet on route</p>
             <p className="mt-4 text-3xl font-bold text-slate-900">{Number(metrics.fleet_on_route).toLocaleString()}</p>
           </div>
-          <div className="rounded-3xl bg-white p-6 shadow-sm ring-1 ring-slate-200">
+          <div className="metric-card rounded-3xl bg-white p-6">
             <p className="text-sm text-slate-500">Tickets today</p>
             <p className="mt-4 text-3xl font-bold text-slate-900">{Number(metrics.tickets_today).toLocaleString()}</p>
           </div>
-          <div className="rounded-3xl bg-white p-6 shadow-sm ring-1 ring-slate-200">
+          <div className="metric-card rounded-3xl bg-white p-6">
             <p className="text-sm text-slate-500">Late departures</p>
             <p className="mt-4 text-3xl font-bold text-slate-900">{Number(metrics.late_departures).toLocaleString()}</p>
           </div>
