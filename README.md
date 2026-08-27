@@ -31,6 +31,17 @@ Set `MOMO_NUMBER`, `MOMO_PROVIDER`, and a random `PAYMENT_WEBHOOK_SECRET` in pro
 
 The webhook expects JSON containing `bookingReference`, `providerReference`, `status` (`paid` or `failed`), `amount`, `currency`, `method`, and `provider`. It rejects invalid signatures and amount mismatches, and repeated provider references are idempotent. Mobile-money bookings remain pending until a verified `paid` event confirms them.
 
+## Background departure reminders
+
+Vercel Cron calls `/api/cron/departure-reminders` every 15 minutes. Set a strong `CRON_SECRET`; the worker accepts only `Authorization: Bearer <CRON_SECRET>`. Apply migrations before enabling the cron schedule:
+
+```bash
+pnpm db:migrate
+pnpm db:check
+```
+
+Email reminders use Resend: set `RESEND_API_KEY` and `NOTIFICATION_FROM_EMAIL`. SMS reminders use Twilio: set `TWILIO_ACCOUNT_SID`, `TWILIO_AUTH_TOKEN`, and `TWILIO_FROM_NUMBER`; customer phone numbers must include the international country code. The worker sends one email and/or SMS reminder approximately 24 hours and 1 hour before each confirmed trip, with database idempotency preventing duplicates. Test it manually with `curl -H "Authorization: Bearer $CRON_SECRET" https://your-domain/api/cron/departure-reminders` after configuring the provider.
+
 ## Schema
 
 The migrations create relational tables for customers, staff roles and permissions, buses, route definitions, schedules, seats, bookings, booking-seat reservations, payments, cancellations, refunds, notifications, and audit logs. Foreign keys use restrictive deletes for financial and booking history, cascading deletes only for dependent seat/notification records, and indexes cover route search, schedule availability, bookings, payments, and audit history.
