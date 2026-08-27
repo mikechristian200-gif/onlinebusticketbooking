@@ -18,7 +18,7 @@ const sql = postgres(connectionString, {
   ssl: process.env.NODE_ENV === 'production' || connectionString.includes('sslmode=require') || connectionString.includes('neon.tech') ? { rejectUnauthorized: false } : false,
   onnotice: () => {},
 });
-const requiredTables = ['customers', 'staff_roles', 'permissions', 'staff_role_permissions', 'staff_users', 'buses', 'routes', 'schedules', 'seats', 'bookings', 'booking_seats', 'payments', 'cancellations', 'refunds', 'notifications', 'audit_logs'];
+const requiredTables = ['customers', 'staff_roles', 'permissions', 'staff_role_permissions', 'staff_users', 'buses', 'routes', 'schedules', 'seats', 'bookings', 'booking_seats', 'payments', 'cancellations', 'refunds', 'notifications', 'audit_logs', 'rate_limit_buckets'];
 
 async function main() {
   const database = await sql`SELECT current_database() AS name;`;

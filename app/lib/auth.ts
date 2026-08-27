@@ -48,7 +48,28 @@ function getInitialUsers() {
 }
 
 function hashPassword(password: string) {
-  return crypto.pbkdf2Sync(password, 'golden-express-salt', 100000, 64, 'sha512').toString('hex');
+  const salt = crypto.randomBytes(16);
+  const derivedKey = crypto.scryptSync(password, salt, 64, { N: 16384, r: 8, p: 1 });
+  return `scrypt$${salt.toString('base64url')}$${derivedKey.toString('base64url')}`;
+}
+
+function verifyPassword(password: string, storedHash: string) {
+  const [algorithm, encodedSalt, encodedHash] = storedHash.split('$');
+  if (algorithm !== 'scrypt' || !encodedSalt || !encodedHash) return false;
+
+  try {
+    const salt = Buffer.from(encodedSalt, 'base64url');
+    const expected = Buffer.from(encodedHash, 'base64url');
+    const actual = crypto.scryptSync(password, salt, expected.length, { N: 16384, r: 8, p: 1 });
+    return actual.length === expected.length && crypto.timingSafeEqual(actual, expected);
+  } catch {
+    return false;
+  }
+}
+
+function verifyLegacyPassword(password: string, storedHash: string) {
+  const expected = crypto.pbkdf2Sync(password, 'golden-express-salt', 100000, 64, 'sha512').toString('hex');
+  return /^[a-f0-9]{128}$/i.test(storedHash) && crypto.timingSafeEqual(Buffer.from(expected, 'hex'), Buffer.from(storedHash, 'hex'));
 }
 
 function signSession(payload: string) {
@@ -191,15 +212,15 @@ export async function validateCredentials(email: string, password: string): Prom
     return null;
   }
 
-  const passwordMatches = crypto.timingSafeEqual(
-    Buffer.from(hashPassword(password), 'hex'),
-    Buffer.from(match.password_hash, 'hex'),
-  );
+  const passwordMatches = verifyPassword(password, match.password_hash) || verifyLegacyPassword(password, match.password_hash);
 
   if (!passwordMatches) {
     return null;
   }
 
+  if (!match.password_hash.startsWith('scrypt$')) {
+    await sql`UPDATE staff_users SET password_hash = ${hashPassword(password)}, updated_at = now() WHERE id = ${match.id};`;
+  }
   return {
     id: match.id,
     name: match.name,
@@ -336,15 +357,15 @@ export async function validateCustomerCredentials(
     return null;
   }
 
-  const passwordMatches = crypto.timingSafeEqual(
-    Buffer.from(hashPassword(password), 'hex'),
-    Buffer.from(match.password_hash, 'hex'),
-  );
+  const passwordMatches = verifyPassword(password, match.password_hash) || verifyLegacyPassword(password, match.password_hash);
 
   if (!passwordMatches) {
     return null;
   }
 
+  if (!match.password_hash.startsWith('scrypt$')) {
+    await sql`UPDATE customers SET password_hash = ${hashPassword(password)}, updated_at = now() WHERE id = ${match.id};`;
+  }
   return {
     id: match.id,
     name: match.name,

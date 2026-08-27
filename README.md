@@ -25,6 +25,12 @@ Next.js bus ticket booking application backed by PostgreSQL.
 
 The application never creates or alters tables during normal page requests. Deployments should run `pnpm db:migrate` as a release step and fail if migrations cannot be applied.
 
+## Mobile money payments
+
+Set `MOMO_NUMBER`, `MOMO_PROVIDER`, and a random `PAYMENT_WEBHOOK_SECRET` in production. `NEXT_PUBLIC_MOMO_NUMBER` is the display value shown to customers. A phone number by itself cannot verify a transfer; configure the selected Mobile Money provider to call `POST /api/payments/webhook` after payment and sign the raw request body with `x-payment-signature` using the webhook secret.
+
+The webhook expects JSON containing `bookingReference`, `providerReference`, `status` (`paid` or `failed`), `amount`, `currency`, `method`, and `provider`. It rejects invalid signatures and amount mismatches, and repeated provider references are idempotent. Mobile-money bookings remain pending until a verified `paid` event confirms them.
+
 ## Schema
 
 The migrations create relational tables for customers, staff roles and permissions, buses, route definitions, schedules, seats, bookings, booking-seat reservations, payments, cancellations, refunds, notifications, and audit logs. Foreign keys use restrictive deletes for financial and booking history, cascading deletes only for dependent seat/notification records, and indexes cover route search, schedule availability, bookings, payments, and audit history.

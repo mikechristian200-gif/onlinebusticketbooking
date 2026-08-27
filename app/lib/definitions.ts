@@ -87,7 +87,7 @@ export type Booking = {
   seats: Seat[];
   totalAmount: number;
   paymentMethod: string;
-  status: 'confirmed' | 'cancelled' | 'completed';
+  status: 'pending' | 'confirmed' | 'cancelled' | 'completed';
   createdAt: string;
   route: Omit<BusRoute, 'seats'>;
 };

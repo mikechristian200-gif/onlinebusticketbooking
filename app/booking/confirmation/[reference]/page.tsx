@@ -1,6 +1,7 @@
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { getBookingByReference } from '@/app/lib/booking-data';
+import { getCurrentCustomer, getCurrentUser } from '@/app/lib/auth';
 import { formatFare } from '@/app/lib/utils';
 import PrintTicketButton from '@/app/ui/print-ticket-button';
 
@@ -18,11 +19,18 @@ export default async function BookingConfirmationPage({
     notFound();
   }
 
+  const customer = await getCurrentCustomer();
+  const staff = await getCurrentUser();
+  const isStaff = staff?.role === 'admin' || staff?.role === 'manager';
+  if (!isStaff && (!customer || customer.id !== booking.customerId)) {
+    notFound();
+  }
+
   return (
     <main className="min-h-screen bg-slate-50 px-6 py-10">
       <div className="mx-auto max-w-4xl space-y-6">
         <div className="rounded-3xl bg-green-50 p-8 ring-1 ring-green-200">
-          <p className="text-sm font-semibold uppercase tracking-[0.22em] text-green-700">Booking confirmed</p>
+          <p className="text-sm font-semibold uppercase tracking-[0.22em] text-green-700">{booking.status === 'pending' ? 'Payment pending' : 'Booking confirmed'}</p>
           <h1 className="mt-3 text-3xl font-semibold text-slate-900">Ticket {booking.reference}</h1>
           <p className="mt-3 text-sm text-slate-600">
             Keep this reference for check-in at the Golden Express agency.

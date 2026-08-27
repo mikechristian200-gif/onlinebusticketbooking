@@ -30,7 +30,11 @@ const connectionString = process.env.POSTGRES_URL;
 const sql = postgres(connectionString, {
   ssl: process.env.NODE_ENV === 'production' || connectionString.includes('sslmode=require') || connectionString.includes('neon.tech') ? { rejectUnauthorized: false } : false,
 });
-const hashPassword = (password) => crypto.pbkdf2Sync(password, 'golden-express-salt', 100000, 64, 'sha512').toString('hex');
+const hashPassword = (password) => {
+  const salt = crypto.randomBytes(16);
+  const derivedKey = crypto.scryptSync(password, salt, 64, { N: 16384, r: 8, p: 1 });
+  return `scrypt$${salt.toString('base64url')}$${derivedKey.toString('base64url')}`;
+};
 
 async function main() {
   for (const user of users) {

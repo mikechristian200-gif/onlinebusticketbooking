@@ -1,11 +1,14 @@
 import { randomUUID } from 'crypto';
 import { sql } from '@/app/lib/db';
 import { getCurrentCustomer, getCurrentUser } from '@/app/lib/auth';
+import { checkRateLimit } from '@/app/lib/rate-limit';
 
 export async function POST(req: Request) {
   try {
     const customer = await getCurrentCustomer();
     if (!customer) return Response.json({ error: 'Please sign in before booking.' }, { status: 401 });
+    const bookingLimit = await checkRateLimit(`booking:${customer.id}`, 10, 3600);
+    if (!bookingLimit.allowed) return Response.json({ error: 'Too many booking attempts. Try again later.' }, { status: 429, headers: { 'Retry-After': String(bookingLimit.retryAfter) } });
 
     const body = await req.json();
     const { routeId, seatIds, passengerName, passengerEmail, passengerPhone, paymentMethod } = body;
@@ -28,13 +31,21 @@ export async function POST(req: Request) {
       const unavailableSeat = seatRows.find((seat: any) => !seat.available);
       if (unavailableSeat) throw new Error(`Seat ${unavailableSeat.id} is no longer available`);
 
-      const totalAmount = seatRows.reduce((total: number, seat: any) => total + Number(seat.price), 0);
+      const routePriceRows = await tx`
+        SELECT price FROM schedules WHERE id = ${routeId} LIMIT 1;
+      `;
+      const routePrice = Number(routePriceRows[0]?.price ?? 0);
+      if (!routePrice) {
+        throw new Error('This departure has no valid ticket price');
+      }
+      const totalAmount = routePrice * normalizedSeatIds.length;
       const bookingReference = `GE-${randomUUID().replaceAll('-', '').slice(0, 8).toUpperCase()}`;
-      const payment = typeof paymentMethod === 'string' && paymentMethod.trim() ? paymentMethod.trim() : 'cash';
+      const payment = typeof paymentMethod === 'string' && ['cash', 'mobile-money', 'card'].includes(paymentMethod.trim()) ? paymentMethod.trim() : 'cash';
+      const bookingStatus = payment === 'cash' ? 'confirmed' : 'pending';
       const bookingRows = await tx`
         INSERT INTO bookings (reference, schedule_id, customer_id, passenger_name, passenger_email, passenger_phone, total_amount, payment_method, status)
         VALUES (${bookingReference}, ${routeId}, ${customer.id}, ${passengerName.trim()}, ${passengerEmail.trim()},
-          ${typeof passengerPhone === 'string' && passengerPhone.trim() ? passengerPhone.trim() : null}, ${totalAmount}, ${payment}, 'confirmed')
+          ${typeof passengerPhone === 'string' && passengerPhone.trim() ? passengerPhone.trim() : null}, ${totalAmount}, ${payment}, ${bookingStatus})
         RETURNING id, reference;
       `;
       const bookingId = bookingRows[0].id;

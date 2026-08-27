@@ -1,9 +1,13 @@
 import { createCustomerAccount, setCustomerSession } from '@/app/lib/auth';
+import { checkRateLimit } from '@/app/lib/rate-limit';
 
 export async function POST(req: Request) {
   try {
     const body = await req.json();
     const { name, email, password, phone } = body;
+    const emailKey = typeof email === 'string' ? email.trim().toLowerCase() : 'unknown';
+    const signupLimit = await checkRateLimit(`customer-signup:${emailKey}`, 3, 3600);
+    if (!signupLimit.allowed) return Response.json({ error: 'Too many attempts. Try again later.' }, { status: 429, headers: { 'Retry-After': String(signupLimit.retryAfter) } });
 
     if (
       typeof name !== 'string' ||

@@ -7,6 +7,7 @@ import {
   updateStaffAccount,
   UserRole,
 } from '@/app/lib/auth';
+import { checkRateLimit } from '@/app/lib/rate-limit';
 
 const ROLES: UserRole[] = ['admin', 'manager', 'driver'];
 
@@ -14,6 +15,8 @@ async function requireAdmin() {
   const user = await getCurrentUser();
   if (!user) return { response: Response.json({ error: 'Authentication required' }, { status: 401 }) };
   if (user.role !== 'admin') return { response: Response.json({ error: 'Admin access required' }, { status: 403 }) };
+  const limiter = await checkRateLimit(`staff-api:${user.id}`, 60, 60);
+  if (!limiter.allowed) return { response: Response.json({ error: 'Too many requests' }, { status: 429, headers: { 'Retry-After': String(limiter.retryAfter) } }) };
   return { user };
 }
 

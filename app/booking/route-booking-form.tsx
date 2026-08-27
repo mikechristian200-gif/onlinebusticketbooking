@@ -18,10 +18,7 @@ export default function RouteBookingForm({ busRoute }: { busRoute: BusRoute }) {
   const router = useRouter();
 
   const totalPrice = useMemo(() => {
-    return selectedSeats.reduce((total, seatId) => {
-      const seat = busRoute.seats.find((item) => item.id === seatId);
-      return total + (seat?.price ?? 0);
-    }, 0);
+    return busRoute.price * selectedSeats.length;
   }, [busRoute.seats, selectedSeats]);
 
   const frontSeats = busRoute.seats.slice(0, 2);
@@ -105,8 +102,9 @@ export default function RouteBookingForm({ busRoute }: { busRoute: BusRoute }) {
                       aria-label={`${seat.label}, ${seat.available ? 'available' : 'sold out'}`}
                       className={`min-h-20 rounded-2xl border-2 px-2 py-3 text-left text-sm transition sm:px-4 ${seat.available ? isSelected ? 'border-blue-300 bg-blue-600 text-white' : 'border-emerald-300 bg-white text-slate-700 hover:bg-blue-50' : 'cursor-not-allowed border-slate-500 bg-slate-700 text-slate-400'}`}
                     >
-                      <span className="font-semibold">{seat.label}</span>
-                      <p className={`mt-2 text-xs ${isSelected ? 'text-blue-100' : 'text-slate-500'}`}>{seat.available ? (isSelected ? 'Selected' : 'Available') : 'Sold out'}</p>
+                      <span className="mx-auto block h-8 w-10 rounded-t-xl border-2 border-current opacity-90 sm:h-10 sm:w-14" />
+                      <span className="mt-2 block text-center font-semibold">{seat.label}</span>
+                      <p className={`mt-1 text-center text-[11px] ${isSelected ? 'text-blue-100' : 'text-slate-500'}`}>{seat.available ? formatFare(busRoute.price) : 'Sold out'}</p>
                     </button>
                   );
                 })}
@@ -128,11 +126,12 @@ export default function RouteBookingForm({ busRoute }: { busRoute: BusRoute }) {
                         aria-label={`${seat.label}, ${seat.available ? 'available' : 'sold out'}`}
                         className={`min-h-24 rounded-2xl border-2 px-2 py-3 text-left text-sm shadow-sm transition hover:-translate-y-0.5 sm:px-4 ${seat.available ? isSelected ? 'border-blue-600 bg-blue-600 text-white shadow-lg shadow-blue-200' : 'border-emerald-300 bg-white text-slate-700 hover:border-blue-400 hover:bg-blue-50' : 'cursor-not-allowed border-slate-300 bg-slate-200 text-slate-400'}`}
                       >
-                        <div className="flex items-center justify-between">
-                          <span className="font-semibold">{seat.label}</span>
+                        <div className="text-center">
+                          <span className="mx-auto block h-8 w-10 rounded-t-xl border-2 border-current opacity-90 sm:h-10 sm:w-14" />
+                          <span className="mt-2 block font-semibold">{seat.label}</span>
                           <span className={`hidden rounded-full px-2 py-0.5 text-[11px] uppercase tracking-[0.12em] sm:inline ${isSelected ? 'bg-blue-500 text-blue-50' : 'bg-slate-100 text-slate-600'}`}>{seat.type}</span>
                         </div>
-                        <p className={`mt-3 text-xs ${isSelected ? 'text-blue-100' : 'text-slate-500'}`}>{seat.available ? (isSelected ? 'Selected' : 'Available') : 'Sold out'}</p>
+                        <p className={`mt-1 text-center text-[11px] ${isSelected ? 'text-blue-100' : 'text-slate-500'}`}>{seat.available ? formatFare(busRoute.price) : 'Sold out'}</p>
                       </button>
                     );
                   })}
@@ -216,6 +215,12 @@ export default function RouteBookingForm({ busRoute }: { busRoute: BusRoute }) {
             </select>
           </label>
         </div>
+
+        {paymentMethod === 'mobile-money' ? (
+          <div className="rounded-2xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900">
+            Send the exact total to {process.env.NEXT_PUBLIC_MOMO_NUMBER || 'the company Mobile Money number'} and keep the transaction reference. Your booking will be confirmed after payment verification.
+          </div>
+        ) : null}
 
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <p className="text-sm text-slate-600">
