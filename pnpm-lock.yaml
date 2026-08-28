@@ -25,10 +25,7 @@ importers:
         version: 16.0.10(react-dom@19.2.0(react@19.2.0))(react@19.2.0)
       next-auth:
         specifier: 5.0.0-beta.25
-        version: 5.0.0-beta.25(next@16.0.10(react-dom@19.2.0(react@19.2.0))(react@19.2.0))(nodemailer@9.0.5)(react@19.2.0)
-      nodemailer:
-        specifier: ^9.0.5
-        version: 9.0.5
+        version: 5.0.0-beta.25(next@16.0.10(react-dom@19.2.0(react@19.2.0))(react@19.2.0))(react@19.2.0)
       postcss:
         specifier: 8.5.1
         version: 8.5.1
@@ -60,9 +57,6 @@ importers:
       '@types/node':
         specifier: 22.10.7
         version: 22.10.7
-      '@types/nodemailer':
-        specifier: ^8.0.1
-        version: 8.0.1
       '@types/react':
         specifier: 19.0.7
         version: 19.0.7
@@ -364,9 +358,6 @@ packages:
 
   '@types/node@22.10.7':
     resolution: {integrity: sha512-V09KvXxFiutGp6B7XkpaDXlNadZxrzajcY50EuoLIpQ6WWYCSvf19lVIazzfIzQvhUN2HjX12spLojTnhuKlGg==}
-
-  '@types/nodemailer@8.0.1':
-    resolution: {integrity: sha512-PxpaInm8V1JQDd4j0ds5HfvWQk8JupS1C0Picb96QJsrrRDjBH+DlK7L4ZdNSqNULhiZRQHc40nLVShaGxXAMw==}
 
   '@types/react-dom@19.0.3':
     resolution: {integrity: sha512-0Knk+HJiMP/qOZgMyNFamlIjw9OFCsyC2ZbigmEEyXXixgre6IQpm/4V+r3qH4GC1JPvRJKInw+on2rV6YZLeA==}
@@ -676,10 +667,6 @@ packages:
   node-releases@2.0.27:
     resolution: {integrity: sha512-nmh3lCkYZ3grZvqcCH+fjmQ7X+H0OeZgP40OierEaAptX4XofMh5kwNbWh7lBduUzCcV/8kZ+NDLCwm2iorIlA==}
 
-  nodemailer@9.0.5:
-    resolution: {integrity: sha512-wvjiKvjczmsN7U/8006JOdXubgBk2XFAbioDMbT+sM7cPs0QrhJTa6KBRX7P5REGGkDcLUz/EarWidb8G8C1jQ==}
-    engines: {node: '>=6.0.0'}
-
   normalize-path@3.0.0:
     resolution: {integrity: sha512-6eZs5Ls3WtCisHWp9S2GUy8dqkpGi4BVSz3GaqiE6ezub0512ESztXUwUB6C6IKbQkY2Pnb/mD4WYojCRwcwLA==}
     engines: {node: '>=0.10.0'}
@@ -958,7 +945,7 @@ snapshots:
 
   '@alloc/quick-lru@5.2.0': {}
 
-  '@auth/core@0.37.2(nodemailer@9.0.5)':
+  '@auth/core@0.37.2':
     dependencies:
       '@panva/hkdf': 1.2.1
       '@types/cookie': 0.6.0
@@ -967,8 +954,6 @@ snapshots:
       oauth4webapi: 3.8.2
       preact: 10.11.3
       preact-render-to-string: 5.2.3(preact@10.11.3)
-    optionalDependencies:
-      nodemailer: 9.0.5
 
   '@dimforge/rapier3d-compat@0.12.0': {}
 
@@ -1160,10 +1145,6 @@ snapshots:
   '@types/node@22.10.7':
     dependencies:
       undici-types: 6.20.0
-
-  '@types/nodemailer@8.0.1':
-    dependencies:
-      '@types/node': 22.10.7
 
   '@types/react-dom@19.0.3(@types/react@19.0.7)':
     dependencies:
@@ -1406,13 +1387,11 @@ snapshots:
 
   nanoid@3.3.11: {}
 
-  next-auth@5.0.0-beta.25(next@16.0.10(react-dom@19.2.0(react@19.2.0))(react@19.2.0))(nodemailer@9.0.5)(react@19.2.0):
+  next-auth@5.0.0-beta.25(next@16.0.10(react-dom@19.2.0(react@19.2.0))(react@19.2.0))(react@19.2.0):
     dependencies:
-      '@auth/core': 0.37.2(nodemailer@9.0.5)
+      '@auth/core': 0.37.2
       next: 16.0.10(react-dom@19.2.0(react@19.2.0))(react@19.2.0)
       react: 19.2.0
-    optionalDependencies:
-      nodemailer: 9.0.5
 
   next@16.0.10(react-dom@19.2.0(react@19.2.0))(react@19.2.0):
     dependencies:
@@ -1438,8 +1417,6 @@ snapshots:
       - babel-plugin-macros
 
   node-releases@2.0.27: {}
-
-  nodemailer@9.0.5: {}
 
   normalize-path@3.0.0: {}
 

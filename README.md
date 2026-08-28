@@ -31,17 +31,6 @@ Set `MOMO_NUMBER`, `MOMO_PROVIDER`, and a random `PAYMENT_WEBHOOK_SECRET` in pro
 
 The webhook expects JSON containing `bookingReference`, `providerReference`, `status` (`paid` or `failed`), `amount`, `currency`, `method`, and `provider`. It rejects invalid signatures and amount mismatches, and repeated provider references are idempotent. Mobile-money bookings remain pending until a verified `paid` event confirms them.
 
-## Background departure reminders
-
-Vercel Cron calls `/api/cron/departure-reminders` every 15 minutes. Set a strong `CRON_SECRET`; the worker accepts only `Authorization: Bearer <CRON_SECRET>`. Apply migrations before enabling the cron schedule:
-
-```bash
-pnpm db:migrate
-pnpm db:check
-```
-
-Email notifications use Nodemailer over SMTP. For Gmail, use `smtp.gmail.com`, port `465`, and `SMTP_SECURE=true`. Set `SMTP_USER=mikechristian200@gmail.com`, create a Google App Password, and put that 16-character value in `SMTP_PASSWORD`; never use or commit the normal Gmail password. Set `SMTP_FROM=Golden Express <mikechristian200@gmail.com>`. Gmail requires 2-Step Verification before App Passwords can be created. The worker delivers booking confirmations, payment confirmations, and one departure reminder approximately 24 hours and 1 hour before each confirmed trip. Database idempotency prevents duplicate departure reminders. Test it manually with `curl -H "Authorization: Bearer $CRON_SECRET" https://your-domain/api/cron/departure-reminders` after configuring the provider.
-
 ## Schema
 
 The migrations create relational tables for customers, staff roles and permissions, buses, route definitions, schedules, seats, bookings, booking-seat reservations, payments, cancellations, refunds, notifications, and audit logs. Foreign keys use restrictive deletes for financial and booking history, cascading deletes only for dependent seat/notification records, and indexes cover route search, schedule availability, bookings, payments, and audit history.
