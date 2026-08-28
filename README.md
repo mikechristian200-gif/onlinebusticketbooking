@@ -31,6 +31,22 @@ Set `MOMO_NUMBER`, `MOMO_PROVIDER`, and a random `PAYMENT_WEBHOOK_SECRET` in pro
 
 The webhook expects JSON containing `bookingReference`, `providerReference`, `status` (`paid` or `failed`), `amount`, `currency`, `method`, and `provider`. It rejects invalid signatures and amount mismatches, and repeated provider references are idempotent. Mobile-money bookings remain pending until a verified `paid` event confirms them.
 
+## Gmail email notifications
+
+The application sends queued booking confirmations, payment confirmations, and departure reminders through Gmail SMTP. Configure these variables in the deployment environment:
+
+```env
+SMTP_HOST=smtp.gmail.com
+SMTP_PORT=465
+SMTP_SECURE=true
+SMTP_USER=your-gmail-address@gmail.com
+SMTP_PASSWORD=your-google-app-password
+SMTP_FROM=Golden Express <your-gmail-address@gmail.com>
+CRON_SECRET=your-cron-secret
+```
+
+Enable Google 2-Step Verification, create a Google App Password, and use that App Password for `SMTP_PASSWORD`. Never use your normal Gmail password or commit the App Password. Vercel Cron calls `/api/cron/departure-reminders` every 15 minutes; it requires `Authorization: Bearer <CRON_SECRET>` and delivers pending email notifications through Gmail.
+
 ## Schema
 
 The migrations create relational tables for customers, staff roles and permissions, buses, route definitions, schedules, seats, bookings, booking-seat reservations, payments, cancellations, refunds, notifications, and audit logs. Foreign keys use restrictive deletes for financial and booking history, cascading deletes only for dependent seat/notification records, and indexes cover route search, schedule availability, bookings, payments, and audit history.
